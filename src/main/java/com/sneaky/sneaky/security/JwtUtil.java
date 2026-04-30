@@ -46,4 +46,22 @@ public class JwtUtil {
                 .getBody()
                 .getSubject();
     }
+
+    public Date extractExpiration(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getExpiration();
+    }
+
+    public Date extractIssuedAt(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getIssuedAt();
+    }
 }

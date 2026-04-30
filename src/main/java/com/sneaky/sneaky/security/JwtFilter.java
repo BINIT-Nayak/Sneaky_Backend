@@ -3,6 +3,7 @@ package com.sneaky.sneaky.security;
 import java.io.IOException;
 import java.util.Collections;
 
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -18,9 +19,11 @@ import jakarta.servlet.http.HttpServletResponse;
 public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final StringRedisTemplate redisTemplate;
 
-    public JwtFilter(JwtUtil jwtUtil) {
+    public JwtFilter(JwtUtil jwtUtil, StringRedisTemplate redisTemplate) {
         this.jwtUtil = jwtUtil;
+        this.redisTemplate = redisTemplate;
     }
 
     @Override
@@ -35,7 +38,9 @@ public class JwtFilter extends OncePerRequestFilter {
             String token = authHeader.substring(7);
             String email = jwtUtil.extractEmail(token);
 
-            if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            if (email != null
+                    && !isLoggedOutToken(email, token)
+                    && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(email, null, Collections.emptyList());
 
@@ -45,5 +50,10 @@ public class JwtFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private boolean isLoggedOutToken(String email, String token) {
+        String logoutTimestamp = redisTemplate.opsForValue().get("auth:logout:" + email);
+        return logoutTimestamp != null && jwtUtil.extractIssuedAt(token).getTime() <= Long.parseLong(logoutTimestamp);
     }
 }
