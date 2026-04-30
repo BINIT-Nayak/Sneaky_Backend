@@ -5,7 +5,7 @@ import java.util.List;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import com.sneaky.sneaky.dto.CreateUserRequest;
+import com.sneaky.sneaky.dto.CreateUserRequestDTO;
 import com.sneaky.sneaky.dto.UserDTO;
 import com.sneaky.sneaky.entity.Users;
 import com.sneaky.sneaky.repository.UsersRepository;
@@ -31,7 +31,7 @@ public class UserService {
                 .toList();
     }
 
-    public UserDTO createUser(CreateUserRequest request) {
+    public UserDTO createUser(CreateUserRequestDTO request) {
 
         Users user = new Users();
         user.setName(request.getName());

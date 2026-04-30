@@ -8,7 +8,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class CreateUserRequest {
+public class CreateUserRequestDTO {
     @NotBlank(message = "Name is required")
     private String name;
 

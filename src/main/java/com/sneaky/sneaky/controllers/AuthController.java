@@ -7,6 +7,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.sneaky.sneaky.dto.LoginRequestDTO;
 import com.sneaky.sneaky.dto.LoginResponseDTO;
+import com.sneaky.sneaky.dto.LogoutRequestDTO;
+import com.sneaky.sneaky.dto.LogoutResponseDTO;
+import com.sneaky.sneaky.dto.RefreshRequestDTO;
+import com.sneaky.sneaky.dto.RefreshResponseDTO;
 import com.sneaky.sneaky.services.AuthService;
 
 import jakarta.validation.Valid;
@@ -22,5 +26,15 @@ public class AuthController {
     @PostMapping("/login")
     public LoginResponseDTO login(@Valid @RequestBody LoginRequestDTO loginRequest) {
         return authService.authenticate(loginRequest);
+    }
+
+    @PostMapping("/refresh")
+    public RefreshResponseDTO refresh(@Valid @RequestBody RefreshRequestDTO refreshRequest) {
+        return authService.refresh(refreshRequest);
+    }
+
+    @PostMapping("/logout")
+    public LogoutResponseDTO logout(@Valid @RequestBody LogoutRequestDTO logoutRequest) {
+        return authService.logout(logoutRequest);
     }
 }

@@ -7,6 +7,10 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.sneaky.sneaky.dto.LoginRequestDTO;
 import com.sneaky.sneaky.dto.LoginResponseDTO;
+import com.sneaky.sneaky.dto.LogoutRequestDTO;
+import com.sneaky.sneaky.dto.LogoutResponseDTO;
+import com.sneaky.sneaky.dto.RefreshRequestDTO;
+import com.sneaky.sneaky.dto.RefreshResponseDTO;
 import com.sneaky.sneaky.entity.Users;
 import com.sneaky.sneaky.repository.UsersRepository;
 import com.sneaky.sneaky.security.JwtUtil;
@@ -29,6 +33,49 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
         }
 
-        return new LoginResponseDTO(jwtUtil.generateToken(user.getEmail()));
+        String accessToken = jwtUtil.generateAccessToken(user.getEmail());
+        String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
+
+        return new LoginResponseDTO(accessToken, refreshToken);
+    }
+
+    public RefreshResponseDTO refresh(RefreshRequestDTO refreshRequest) {
+        try {
+            String email = jwtUtil.extractEmail(refreshRequest.getRefreshToken());
+
+            // Verify user still exists
+            userRepository.findByEmail(email)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+
+            String newAccessToken = jwtUtil.generateAccessToken(email);
+            return new RefreshResponseDTO(newAccessToken);
+
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token");
+        }
+    }
+
+    public LogoutResponseDTO logout(LogoutRequestDTO logoutRequest) {
+        try {
+            // Validate the refresh token (extract email to ensure it's valid)
+            String email = jwtUtil.extractEmail(logoutRequest.getRefreshToken());
+
+            // Verify user exists (optional, but good practice)
+            userRepository.findByEmail(email)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+
+            /* TODO:
+             1. Add the refresh token to a blacklist
+            2. Invalidate all tokens for this user
+             3. Store logout timestamp
+            Since JWTs can't be invalidated server-side, logout primarily happens client-side (delete tokens)
+            Use Redis for Blacklist (not DB), Faster lookup, Auto expiry
+            */
+
+            return new LogoutResponseDTO("Successfully logged out");
+
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token");
+        }
     }
 }

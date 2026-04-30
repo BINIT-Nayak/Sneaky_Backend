@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.sneaky.sneaky.dto.CreateUserRequest;
+import com.sneaky.sneaky.dto.CreateUserRequestDTO;
 import com.sneaky.sneaky.dto.LoginRequestDTO;
 import com.sneaky.sneaky.dto.LoginResponseDTO;
 import com.sneaky.sneaky.dto.UserDTO;
@@ -33,7 +33,7 @@ public class UserController {
     }
 
     @PostMapping
-    public LoginResponseDTO createUser(@Valid @RequestBody CreateUserRequest request) {
+    public LoginResponseDTO createUser(@Valid @RequestBody CreateUserRequestDTO request) {
         userService.createUser(request);
 
         LoginRequestDTO loginRequest = new LoginRequestDTO();
