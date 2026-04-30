@@ -1,0 +1,160 @@
+package com.sneaky.sneaky.services;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.time.Duration;
+import java.util.Date;
+import java.util.Optional;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.server.ResponseStatusException;
+
+import com.sneaky.sneaky.dto.LoginRequestDTO;
+import com.sneaky.sneaky.dto.LoginResponseDTO;
+import com.sneaky.sneaky.dto.LogoutRequestDTO;
+import com.sneaky.sneaky.dto.LogoutResponseDTO;
+import com.sneaky.sneaky.dto.RefreshRequestDTO;
+import com.sneaky.sneaky.dto.RefreshResponseDTO;
+import com.sneaky.sneaky.entity.Users;
+import com.sneaky.sneaky.repository.UsersRepository;
+import com.sneaky.sneaky.security.JwtUtil;
+
+@ExtendWith(MockitoExtension.class)
+class AuthServiceTest {
+
+    @Mock
+    private UsersRepository userRepository;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private JwtUtil jwtUtil;
+
+    @Mock
+    private StringRedisTemplate redisTemplate;
+
+    @Mock
+    private ValueOperations<String, String> valueOperations;
+
+    @InjectMocks
+    private AuthService authService;
+
+    @Test
+    void authenticateReturnsAccessAndRefreshTokensWhenCredentialsMatch() {
+        Users user = user("dev@example.com", "encoded");
+        LoginRequestDTO request = loginRequest("dev@example.com", "plain");
+
+        when(userRepository.findByEmail("dev@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("plain", "encoded")).thenReturn(true);
+        when(jwtUtil.generateAccessToken("dev@example.com")).thenReturn("access-token");
+        when(jwtUtil.generateRefreshToken("dev@example.com")).thenReturn("refresh-token");
+
+        LoginResponseDTO response = authService.authenticate(request);
+
+        assertThat(response.getAccessToken()).isEqualTo("access-token");
+        assertThat(response.getRefreshToken()).isEqualTo("refresh-token");
+    }
+
+    @Test
+    void authenticateRejectsInvalidPassword() {
+        Users user = user("dev@example.com", "encoded");
+
+        when(userRepository.findByEmail("dev@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("wrong", "encoded")).thenReturn(false);
+
+        assertThatThrownBy(() -> authService.authenticate(loginRequest("dev@example.com", "wrong")))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting("statusCode")
+                .isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        verify(jwtUtil, never()).generateAccessToken(anyString());
+    }
+
+    @Test
+    void refreshRejectsBlacklistedRefreshToken() {
+        RefreshRequestDTO request = refreshRequest("refresh-token");
+
+        when(jwtUtil.extractEmail("refresh-token")).thenReturn("dev@example.com");
+        when(redisTemplate.hasKey("auth:blacklist:refresh:refresh-token")).thenReturn(true);
+
+        assertThatThrownBy(() -> authService.refresh(request))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting("statusCode")
+                .isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    void refreshReturnsNewAccessTokenForValidRefreshToken() {
+        RefreshRequestDTO request = refreshRequest("refresh-token");
+
+        when(jwtUtil.extractEmail("refresh-token")).thenReturn("dev@example.com");
+        when(redisTemplate.hasKey("auth:blacklist:refresh:refresh-token")).thenReturn(false);
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get("auth:logout:dev@example.com")).thenReturn(null);
+        when(userRepository.findByEmail("dev@example.com")).thenReturn(Optional.of(user("dev@example.com", "encoded")));
+        when(jwtUtil.generateAccessToken("dev@example.com")).thenReturn("new-access-token");
+
+        RefreshResponseDTO response = authService.refresh(request);
+
+        assertThat(response.getAccessToken()).isEqualTo("new-access-token");
+    }
+
+    @Test
+    void logoutBlacklistsRefreshTokenAndStoresLogoutTimestamp() {
+        LogoutRequestDTO request = new LogoutRequestDTO();
+        request.setRefreshToken("refresh-token");
+
+        when(jwtUtil.extractEmail("refresh-token")).thenReturn("dev@example.com");
+        when(userRepository.findByEmail("dev@example.com")).thenReturn(Optional.of(user("dev@example.com", "encoded")));
+        when(jwtUtil.extractExpiration("refresh-token")).thenReturn(new Date(System.currentTimeMillis() + 60_000));
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+
+        LogoutResponseDTO response = authService.logout(request);
+
+        assertThat(response.getMessage()).isEqualTo("Successfully logged out");
+        verify(valueOperations).set(
+                eq("auth:blacklist:refresh:refresh-token"),
+                eq("dev@example.com"),
+                any(Duration.class));
+        verify(valueOperations).set(
+                eq("auth:logout:dev@example.com"),
+                anyString(),
+                any(Duration.class));
+    }
+
+    private static Users user(String email, String password) {
+        Users user = new Users();
+        user.setEmail(email);
+        user.setPassword(password);
+        return user;
+    }
+
+    private static LoginRequestDTO loginRequest(String email, String password) {
+        LoginRequestDTO request = new LoginRequestDTO();
+        request.setEmail(email);
+        request.setPassword(password);
+        return request;
+    }
+
+    private static RefreshRequestDTO refreshRequest(String token) {
+        RefreshRequestDTO request = new RefreshRequestDTO();
+        request.setRefreshToken(token);
+        return request;
+    }
+}
