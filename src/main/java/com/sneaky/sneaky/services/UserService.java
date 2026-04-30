@@ -1,7 +1,6 @@
 package com.sneaky.sneaky.services;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -29,7 +28,7 @@ public class UserService {
                         user.getEmail(),
                         user.getIsGuest()
                 ))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public UserDTO createUser(CreateUserRequest request) {

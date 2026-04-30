@@ -9,7 +9,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.sneaky.sneaky.dto.CreateUserRequest;
+import com.sneaky.sneaky.dto.LoginRequestDTO;
+import com.sneaky.sneaky.dto.LoginResponseDTO;
 import com.sneaky.sneaky.dto.UserDTO;
+import com.sneaky.sneaky.services.AuthService;
 import com.sneaky.sneaky.services.UserService;
 
 import jakarta.validation.Valid;
@@ -21,7 +24,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class UserController {
 
-   private final UserService userService;
+    private final UserService userService;
+    private final AuthService authService;
 
     @GetMapping
     public List<UserDTO> getUsers() {
@@ -29,7 +33,13 @@ public class UserController {
     }
 
     @PostMapping
-    public UserDTO createUser(@Valid @RequestBody CreateUserRequest request) {
-        return userService.createUser(request);
+    public LoginResponseDTO createUser(@Valid @RequestBody CreateUserRequest request) {
+        userService.createUser(request);
+
+        LoginRequestDTO loginRequest = new LoginRequestDTO();
+        loginRequest.setEmail(request.getEmail());
+        loginRequest.setPassword(request.getPassword());
+
+        return authService.authenticate(loginRequest);
     }
 }
