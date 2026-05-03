@@ -2,6 +2,7 @@ package com.sneaky.sneaky.services;
 
 import java.time.Duration;
 import java.util.Date;
+import java.util.Locale;
 
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
@@ -31,15 +32,17 @@ public class AuthService {
     private final StringRedisTemplate redisTemplate;
 
     public LoginResponseDTO authenticate(LoginRequestDTO loginRequest) {
-        Users user = userRepository.findByEmail(loginRequest.getEmail())
+        String normalizedEmail = loginRequest.getEmail().trim().toLowerCase(Locale.ROOT);
+
+        Users user = userRepository.findByEmail(normalizedEmail)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials"));
 
         if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
         }
 
-        String accessToken = jwtUtil.generateAccessToken(user.getEmail());
-        String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
+        String accessToken = jwtUtil.generateAccessToken(normalizedEmail);
+        String refreshToken = jwtUtil.generateRefreshToken(normalizedEmail);
 
         return new LoginResponseDTO(accessToken, refreshToken);
     }

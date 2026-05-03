@@ -1,9 +1,12 @@
 package com.sneaky.sneaky.services;
 
 import java.util.List;
+import java.util.Locale;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.sneaky.sneaky.dto.CreateUserRequestDTO;
 import com.sneaky.sneaky.dto.UserDTO;
@@ -32,10 +35,15 @@ public class UserService {
     }
 
     public UserDTO createUser(CreateUserRequestDTO request) {
+        String normalizedEmail = request.getEmail().trim().toLowerCase(Locale.ROOT);
+
+        if (userRepository.existsByEmail(normalizedEmail)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "User already exists");
+        }
 
         Users user = new Users();
-        user.setName(request.getName());
-        user.setEmail(request.getEmail());
+        user.setName(request.getName().trim());
+        user.setEmail(normalizedEmail);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setIsGuest(request.getIsGuest());
 

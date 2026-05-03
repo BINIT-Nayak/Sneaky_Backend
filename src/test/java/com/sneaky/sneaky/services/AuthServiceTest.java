@@ -58,7 +58,7 @@ class AuthServiceTest {
     @Test
     void authenticateReturnsAccessAndRefreshTokensWhenCredentialsMatch() {
         Users user = user("dev@example.com", "encoded");
-        LoginRequestDTO request = loginRequest("dev@example.com", "plain");
+        LoginRequestDTO request = loginRequest("Dev@Example.com", "plain");
 
         when(userRepository.findByEmail("dev@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("plain", "encoded")).thenReturn(true);

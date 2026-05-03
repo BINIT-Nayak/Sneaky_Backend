@@ -11,4 +11,6 @@ import com.sneaky.sneaky.entity.Users;
 @Repository
 public interface UsersRepository  extends JpaRepository<Users, UUID>{
     Optional<Users> findByEmail(String email);
+
+    boolean existsByEmail(String email);
 }
