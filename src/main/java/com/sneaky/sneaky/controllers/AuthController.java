@@ -5,13 +5,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.sneaky.sneaky.dto.CreateUserRequestDTO;
-import com.sneaky.sneaky.dto.LoginRequestDTO;
-import com.sneaky.sneaky.dto.LoginResponseDTO;
-import com.sneaky.sneaky.dto.LogoutRequestDTO;
-import com.sneaky.sneaky.dto.LogoutResponseDTO;
-import com.sneaky.sneaky.dto.RefreshRequestDTO;
-import com.sneaky.sneaky.dto.RefreshResponseDTO;
+import com.sneaky.sneaky.dto.auth.*;
+import com.sneaky.sneaky.dto.user.CreateUserRequestDTO;
 import com.sneaky.sneaky.services.AuthService;
 
 import jakarta.validation.Valid;

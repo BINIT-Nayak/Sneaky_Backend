@@ -1,4 +1,4 @@
-package com.sneaky.sneaky.dto;
+package com.sneaky.sneaky.dto.user;
 
 import lombok.Getter;
 import lombok.Setter;

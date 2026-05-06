@@ -11,9 +11,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.sneaky.sneaky.dto.CreateUserRequestDTO;
-import com.sneaky.sneaky.dto.UpdateUserRequestDTO;
-import com.sneaky.sneaky.dto.UserDTO;
+import com.sneaky.sneaky.dto.user.*;
 import com.sneaky.sneaky.entity.Users;
 import com.sneaky.sneaky.repository.UsersRepository;
 

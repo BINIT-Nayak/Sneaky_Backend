@@ -21,8 +21,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.sneaky.sneaky.dto.CreateUserRequestDTO;
-import com.sneaky.sneaky.dto.UserDTO;
+import com.sneaky.sneaky.dto.user.CreateUserRequestDTO;
+import com.sneaky.sneaky.dto.user.UserDTO;
 import com.sneaky.sneaky.entity.Users;
 import com.sneaky.sneaky.repository.UsersRepository;
 

@@ -1,10 +1,11 @@
-package com.sneaky.sneaky.dto;
+package com.sneaky.sneaky.dto.auth;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-public class RefreshResponseDTO {
+public class LoginResponseDTO {
     private String accessToken;
+    private String refreshToken;
 }

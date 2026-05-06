@@ -15,12 +15,12 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sneaky.sneaky.dto.LoginRequestDTO;
-import com.sneaky.sneaky.dto.LoginResponseDTO;
-import com.sneaky.sneaky.dto.LogoutRequestDTO;
-import com.sneaky.sneaky.dto.LogoutResponseDTO;
-import com.sneaky.sneaky.dto.RefreshRequestDTO;
-import com.sneaky.sneaky.dto.RefreshResponseDTO;
+import com.sneaky.sneaky.dto.auth.LoginRequestDTO;
+import com.sneaky.sneaky.dto.auth.LoginResponseDTO;
+import com.sneaky.sneaky.dto.auth.LogoutRequestDTO;
+import com.sneaky.sneaky.dto.auth.LogoutResponseDTO;
+import com.sneaky.sneaky.dto.auth.RefreshRequestDTO;
+import com.sneaky.sneaky.dto.auth.RefreshResponseDTO;
 import com.sneaky.sneaky.services.AuthService;
 
 class AuthControllerTest {

@@ -23,11 +23,11 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sneaky.sneaky.dto.CreateUserRequestDTO;
-import com.sneaky.sneaky.dto.LoginRequestDTO;
-import com.sneaky.sneaky.dto.LoginResponseDTO;
-import com.sneaky.sneaky.dto.UpdateUserRequestDTO;
-import com.sneaky.sneaky.dto.UserDTO;
+import com.sneaky.sneaky.dto.auth.LoginRequestDTO;
+import com.sneaky.sneaky.dto.auth.LoginResponseDTO;
+import com.sneaky.sneaky.dto.user.CreateUserRequestDTO;
+import com.sneaky.sneaky.dto.user.UpdateUserRequestDTO;
+import com.sneaky.sneaky.dto.user.UserDTO;
 import com.sneaky.sneaky.security.CurrentUser;
 import com.sneaky.sneaky.services.AuthService;
 import com.sneaky.sneaky.services.UserService;

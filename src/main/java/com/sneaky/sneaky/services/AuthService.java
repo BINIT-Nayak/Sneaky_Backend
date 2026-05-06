@@ -10,13 +10,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.sneaky.sneaky.dto.CreateUserRequestDTO;
-import com.sneaky.sneaky.dto.LoginRequestDTO;
-import com.sneaky.sneaky.dto.LoginResponseDTO;
-import com.sneaky.sneaky.dto.LogoutRequestDTO;
-import com.sneaky.sneaky.dto.LogoutResponseDTO;
-import com.sneaky.sneaky.dto.RefreshRequestDTO;
-import com.sneaky.sneaky.dto.RefreshResponseDTO;
+import com.sneaky.sneaky.dto.auth.*;
+import com.sneaky.sneaky.dto.user.CreateUserRequestDTO;
 import com.sneaky.sneaky.entity.Users;
 import com.sneaky.sneaky.repository.UsersRepository;
 import com.sneaky.sneaky.security.JwtUtil;

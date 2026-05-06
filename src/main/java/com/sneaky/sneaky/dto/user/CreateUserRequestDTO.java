@@ -1,4 +1,4 @@
-package com.sneaky.sneaky.dto;
+package com.sneaky.sneaky.dto.user;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

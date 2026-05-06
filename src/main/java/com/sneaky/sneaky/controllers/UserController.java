@@ -13,11 +13,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.HttpStatus;
 
-import com.sneaky.sneaky.dto.CreateUserRequestDTO;
-import com.sneaky.sneaky.dto.LoginRequestDTO;
-import com.sneaky.sneaky.dto.LoginResponseDTO;
-import com.sneaky.sneaky.dto.UpdateUserRequestDTO;
-import com.sneaky.sneaky.dto.UserDTO;
+import com.sneaky.sneaky.dto.auth.LoginRequestDTO;
+import com.sneaky.sneaky.dto.auth.LoginResponseDTO;
+import com.sneaky.sneaky.dto.user.*;
 import com.sneaky.sneaky.security.CurrentUser;
 import com.sneaky.sneaky.services.AuthService;
 import com.sneaky.sneaky.services.UserService;

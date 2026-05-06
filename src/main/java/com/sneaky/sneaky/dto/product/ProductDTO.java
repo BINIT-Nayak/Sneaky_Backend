@@ -1,4 +1,4 @@
-package com.sneaky.sneaky.dto;
+package com.sneaky.sneaky.dto.product;
 
 import java.math.BigDecimal;
 import java.util.UUID;
