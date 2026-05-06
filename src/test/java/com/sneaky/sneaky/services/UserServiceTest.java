@@ -16,6 +16,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.server.ResponseStatusException;
@@ -33,6 +34,9 @@ class UserServiceTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private StringRedisTemplate redisTemplate;
 
     @InjectMocks
     private UserService userService;
@@ -75,7 +79,7 @@ class UserServiceTest {
             return user;
         });
 
-        UserDTO created = userService.createUser(request);
+        Users created = userService.createUser(request);
 
         ArgumentCaptor<Users> userCaptor = ArgumentCaptor.forClass(Users.class);
         verify(userRepository).save(userCaptor.capture());

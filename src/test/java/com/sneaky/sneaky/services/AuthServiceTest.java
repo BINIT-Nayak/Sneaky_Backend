@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import java.time.Duration;
 import java.util.Date;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,6 +37,7 @@ import com.sneaky.sneaky.security.JwtUtil;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
+    private static final UUID USER_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
 
     @Mock
     private UsersRepository userRepository;
@@ -62,8 +64,8 @@ class AuthServiceTest {
 
         when(userRepository.findByEmail("dev@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("plain", "encoded")).thenReturn(true);
-        when(jwtUtil.generateAccessToken("dev@example.com")).thenReturn("access-token");
-        when(jwtUtil.generateRefreshToken("dev@example.com")).thenReturn("refresh-token");
+        when(jwtUtil.generateAccessToken(USER_ID)).thenReturn("access-token");
+        when(jwtUtil.generateRefreshToken(USER_ID)).thenReturn("refresh-token");
 
         LoginResponseDTO response = authService.authenticate(request);
 
@@ -83,14 +85,14 @@ class AuthServiceTest {
                 .extracting("statusCode")
                 .isEqualTo(HttpStatus.UNAUTHORIZED);
 
-        verify(jwtUtil, never()).generateAccessToken(anyString());
+        verify(jwtUtil, never()).generateAccessToken(any(UUID.class));
     }
 
     @Test
     void refreshRejectsBlacklistedRefreshToken() {
         RefreshRequestDTO request = refreshRequest("refresh-token");
 
-        when(jwtUtil.extractEmail("refresh-token")).thenReturn("dev@example.com");
+        when(jwtUtil.extractUserId("refresh-token")).thenReturn(USER_ID);
         when(redisTemplate.hasKey("auth:blacklist:refresh:refresh-token")).thenReturn(true);
 
         assertThatThrownBy(() -> authService.refresh(request))
@@ -103,12 +105,12 @@ class AuthServiceTest {
     void refreshReturnsNewAccessTokenForValidRefreshToken() {
         RefreshRequestDTO request = refreshRequest("refresh-token");
 
-        when(jwtUtil.extractEmail("refresh-token")).thenReturn("dev@example.com");
+        when(jwtUtil.extractUserId("refresh-token")).thenReturn(USER_ID);
         when(redisTemplate.hasKey("auth:blacklist:refresh:refresh-token")).thenReturn(false);
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-        when(valueOperations.get("auth:logout:dev@example.com")).thenReturn(null);
-        when(userRepository.findByEmail("dev@example.com")).thenReturn(Optional.of(user("dev@example.com", "encoded")));
-        when(jwtUtil.generateAccessToken("dev@example.com")).thenReturn("new-access-token");
+        when(valueOperations.get("auth:logout:" + USER_ID)).thenReturn(null);
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user("dev@example.com", "encoded")));
+        when(jwtUtil.generateAccessToken(USER_ID)).thenReturn("new-access-token");
 
         RefreshResponseDTO response = authService.refresh(request);
 
@@ -120,8 +122,8 @@ class AuthServiceTest {
         LogoutRequestDTO request = new LogoutRequestDTO();
         request.setRefreshToken("refresh-token");
 
-        when(jwtUtil.extractEmail("refresh-token")).thenReturn("dev@example.com");
-        when(userRepository.findByEmail("dev@example.com")).thenReturn(Optional.of(user("dev@example.com", "encoded")));
+        when(jwtUtil.extractUserId("refresh-token")).thenReturn(USER_ID);
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user("dev@example.com", "encoded")));
         when(jwtUtil.extractExpiration("refresh-token")).thenReturn(new Date(System.currentTimeMillis() + 60_000));
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
 
@@ -130,16 +132,17 @@ class AuthServiceTest {
         assertThat(response.getMessage()).isEqualTo("Successfully logged out");
         verify(valueOperations).set(
                 eq("auth:blacklist:refresh:refresh-token"),
-                eq("dev@example.com"),
+                eq(USER_ID.toString()),
                 any(Duration.class));
         verify(valueOperations).set(
-                eq("auth:logout:dev@example.com"),
+                eq("auth:logout:" + USER_ID),
                 anyString(),
                 any(Duration.class));
     }
 
     private static Users user(String email, String password) {
         Users user = new Users();
+        user.setUserId(USER_ID);
         user.setEmail(email);
         user.setPassword(password);
         return user;

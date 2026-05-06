@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.sneaky.sneaky.dto.CreateUserRequestDTO;
 import com.sneaky.sneaky.dto.LoginRequestDTO;
 import com.sneaky.sneaky.dto.LoginResponseDTO;
 import com.sneaky.sneaky.dto.LogoutRequestDTO;
@@ -36,5 +37,10 @@ public class AuthController {
     @PostMapping("/logout")
     public LogoutResponseDTO logout(@Valid @RequestBody LogoutRequestDTO logoutRequest) {
         return authService.logout(logoutRequest);
+    }
+
+    @PostMapping("/register")
+    public LoginResponseDTO register(@Valid @RequestBody CreateUserRequestDTO request) {
+        return authService.register(request);
     }
 }

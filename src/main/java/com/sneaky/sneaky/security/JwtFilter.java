@@ -2,6 +2,7 @@ package com.sneaky.sneaky.security;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.UUID;
 
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpHeaders;
@@ -35,8 +36,8 @@ public class JwtFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain)
+            HttpServletResponse response,
+            FilterChain filterChain)
             throws ServletException, IOException {
 
         String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
@@ -45,14 +46,14 @@ public class JwtFilter extends OncePerRequestFilter {
             String token = authHeader.substring(7);
 
             try {
-                String email = jwtUtil.extractEmail(token);
+                UUID userId = jwtUtil.extractUserId(token);
 
-                if (email != null
-                        && usersRepository.existsByEmail(email)
-                        && !isLoggedOutToken(email, token)
+                if (userId != null
+                        && usersRepository.existsById(userId)
+                        && !isLoggedOutToken(userId, token)
                         && SecurityContextHolder.getContext().getAuthentication() == null) {
-                    UsernamePasswordAuthenticationToken authentication =
-                            new UsernamePasswordAuthenticationToken(email, null, Collections.emptyList());
+                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userId.toString(),
+                            null, Collections.emptyList());
 
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -67,8 +68,8 @@ public class JwtFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    private boolean isLoggedOutToken(String email, String token) {
-        String logoutTimestamp = redisTemplate.opsForValue().get("auth:logout:" + email);
+    private boolean isLoggedOutToken(UUID userId, String token) {
+        String logoutTimestamp = redisTemplate.opsForValue().get("auth:logout:" + userId);
         return logoutTimestamp != null && jwtUtil.extractIssuedAt(token).getTime() <= Long.parseLong(logoutTimestamp);
     }
 }

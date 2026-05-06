@@ -10,6 +10,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.sneaky.sneaky.dto.CreateUserRequestDTO;
 import com.sneaky.sneaky.dto.LoginRequestDTO;
 import com.sneaky.sneaky.dto.LoginResponseDTO;
 import com.sneaky.sneaky.dto.LogoutRequestDTO;
@@ -27,6 +28,7 @@ import lombok.AllArgsConstructor;
 public class AuthService {
 
     private final UsersRepository userRepository;
+    private final UserService userService;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final StringRedisTemplate redisTemplate;
@@ -41,31 +43,32 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
         }
 
-        String accessToken = jwtUtil.generateAccessToken(normalizedEmail);
-        String refreshToken = jwtUtil.generateRefreshToken(normalizedEmail);
+        String accessToken = jwtUtil.generateAccessToken(user.getUserId());
+        String refreshToken = jwtUtil.generateRefreshToken(user.getUserId());
 
         return new LoginResponseDTO(accessToken, refreshToken);
     }
 
     public RefreshResponseDTO refresh(RefreshRequestDTO refreshRequest) {
         try {
-            String email = jwtUtil.extractEmail(refreshRequest.getRefreshToken());
+            var userId = jwtUtil.extractUserId(refreshRequest.getRefreshToken());
 
-            if (Boolean.TRUE.equals(redisTemplate.hasKey("auth:blacklist:refresh:" + refreshRequest.getRefreshToken()))) {
+            if (Boolean.TRUE
+                    .equals(redisTemplate.hasKey("auth:blacklist:refresh:" + refreshRequest.getRefreshToken()))) {
                 throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token");
             }
 
-            String logoutTimestamp = redisTemplate.opsForValue().get("auth:logout:" + email);
+            String logoutTimestamp = redisTemplate.opsForValue().get("auth:logout:" + userId);
             if (logoutTimestamp != null
-                    && jwtUtil.extractIssuedAt(refreshRequest.getRefreshToken()).getTime() <= Long.parseLong(logoutTimestamp)) {
+                    && jwtUtil.extractIssuedAt(refreshRequest.getRefreshToken()).getTime() <= Long
+                            .parseLong(logoutTimestamp)) {
                 throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token");
             }
 
-            // Verify user still exists
-            userRepository.findByEmail(email)
+            userRepository.findById(userId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
 
-            String newAccessToken = jwtUtil.generateAccessToken(email);
+            String newAccessToken = jwtUtil.generateAccessToken(userId);
             return new RefreshResponseDTO(newAccessToken);
 
         } catch (Exception e) {
@@ -75,11 +78,9 @@ public class AuthService {
 
     public LogoutResponseDTO logout(LogoutRequestDTO logoutRequest) {
         try {
-            // Validate the refresh token (extract email to ensure it's valid)
-            String email = jwtUtil.extractEmail(logoutRequest.getRefreshToken());
+            var userId = jwtUtil.extractUserId(logoutRequest.getRefreshToken());
 
-            // Verify user exists (optional, but good practice)
-            userRepository.findByEmail(email)
+            userRepository.findById(userId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
 
             Date refreshTokenExpiry = jwtUtil.extractExpiration(logoutRequest.getRefreshToken());
@@ -88,12 +89,12 @@ public class AuthService {
             if (ttlMillis > 0) {
                 redisTemplate.opsForValue().set(
                         "auth:blacklist:refresh:" + logoutRequest.getRefreshToken(),
-                        email,
+                        userId.toString(),
                         Duration.ofMillis(ttlMillis));
             }
 
             redisTemplate.opsForValue().set(
-                    "auth:logout:" + email,
+                    "auth:logout:" + userId,
                     String.valueOf(System.currentTimeMillis()),
                     Duration.ofMillis(Math.max(ttlMillis, 1)));
 
@@ -102,5 +103,15 @@ public class AuthService {
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token");
         }
+    }
+
+    public LoginResponseDTO register(CreateUserRequestDTO request) {
+
+        Users user = userService.createUser(request);
+
+        String accessToken = jwtUtil.generateAccessToken(user.getUserId());
+        String refreshToken = jwtUtil.generateRefreshToken(user.getUserId());
+
+        return new LoginResponseDTO(accessToken, refreshToken);
     }
 }

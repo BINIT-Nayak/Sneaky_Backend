@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Date;
+import java.util.UUID;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -22,6 +23,7 @@ import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 
 class JwtFilterTest {
+    private static final UUID USER_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
 
     private final JwtUtil jwtUtil = mock(JwtUtil.class);
     private final StringRedisTemplate redisTemplate = mock(StringRedisTemplate.class);
@@ -41,14 +43,14 @@ class JwtFilterTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
         FilterChain filterChain = mock(FilterChain.class);
 
-        when(jwtUtil.extractEmail("access-token")).thenReturn("dev@example.com");
-        when(usersRepository.existsByEmail("dev@example.com")).thenReturn(true);
+        when(jwtUtil.extractUserId("access-token")).thenReturn(USER_ID);
+        when(usersRepository.existsById(USER_ID)).thenReturn(true);
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-        when(valueOperations.get("auth:logout:dev@example.com")).thenReturn(null);
+        when(valueOperations.get("auth:logout:" + USER_ID)).thenReturn(null);
 
         jwtFilter.doFilter(request, response, filterChain);
 
-        assertThat(SecurityContextHolder.getContext().getAuthentication().getName()).isEqualTo("dev@example.com");
+        assertThat(SecurityContextHolder.getContext().getAuthentication().getName()).isEqualTo(USER_ID.toString());
         verify(filterChain).doFilter(request, response);
     }
 
@@ -59,10 +61,10 @@ class JwtFilterTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
         FilterChain filterChain = mock(FilterChain.class);
 
-        when(jwtUtil.extractEmail("access-token")).thenReturn("dev@example.com");
-        when(usersRepository.existsByEmail("dev@example.com")).thenReturn(true);
+        when(jwtUtil.extractUserId("access-token")).thenReturn(USER_ID);
+        when(usersRepository.existsById(USER_ID)).thenReturn(true);
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-        when(valueOperations.get("auth:logout:dev@example.com")).thenReturn("2000");
+        when(valueOperations.get("auth:logout:" + USER_ID)).thenReturn("2000");
         when(jwtUtil.extractIssuedAt("access-token")).thenReturn(new Date(1000));
 
         jwtFilter.doFilter(request, response, filterChain);
@@ -78,8 +80,8 @@ class JwtFilterTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
         FilterChain filterChain = mock(FilterChain.class);
 
-        when(jwtUtil.extractEmail("access-token")).thenReturn("dev@example.com");
-        when(usersRepository.existsByEmail("dev@example.com")).thenReturn(false);
+        when(jwtUtil.extractUserId("access-token")).thenReturn(USER_ID);
+        when(usersRepository.existsById(USER_ID)).thenReturn(false);
 
         jwtFilter.doFilter(request, response, filterChain);
 
@@ -94,7 +96,7 @@ class JwtFilterTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
         FilterChain filterChain = mock(FilterChain.class);
 
-        when(jwtUtil.extractEmail("bad-token")).thenThrow(new JwtException("bad token"));
+        when(jwtUtil.extractUserId("bad-token")).thenThrow(new JwtException("bad token"));
 
         jwtFilter.doFilter(request, response, filterChain);
 

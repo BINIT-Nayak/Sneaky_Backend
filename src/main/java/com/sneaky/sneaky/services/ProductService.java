@@ -35,7 +35,6 @@ public class ProductService {
                 product.getImageUrl(),
                 product.getDescription(),
                 brand == null ? "" : brand.getName(),
-                product.getCategory()
-        );
+                product.getCategory());
     }
 }
