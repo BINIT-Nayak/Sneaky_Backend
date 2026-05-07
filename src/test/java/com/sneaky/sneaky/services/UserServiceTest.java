@@ -22,6 +22,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.sneaky.sneaky.dto.user.CreateUserRequestDTO;
+import com.sneaky.sneaky.dto.user.UpdateUserRequestDTO;
 import com.sneaky.sneaky.dto.user.UserDTO;
 import com.sneaky.sneaky.entity.Users;
 import com.sneaky.sneaky.repository.UsersRepository;
@@ -106,5 +107,28 @@ class UserServiceTest {
                 .isEqualTo(HttpStatus.CONFLICT);
 
         verify(userRepository, never()).save(any(Users.class));
+    }
+
+    @Test
+    void patchUserEncodesPasswordWhenProvided() {
+        UUID userId = UUID.randomUUID();
+        Users user = new Users();
+        user.setUserId(userId);
+        user.setName("Mina");
+        user.setEmail("mina@example.com");
+        user.setPassword("old-password");
+        user.setIsGuest(false);
+        UpdateUserRequestDTO request = new UpdateUserRequestDTO();
+        request.setPassword("new-secret");
+
+        when(userRepository.findById(userId)).thenReturn(java.util.Optional.of(user));
+        when(passwordEncoder.encode("new-secret")).thenReturn("encoded-new-secret");
+        when(userRepository.save(user)).thenReturn(user);
+
+        UserDTO updated = userService.patchUserById(userId, request);
+
+        assertThat(user.getPassword()).isEqualTo("encoded-new-secret");
+        assertThat(updated.getEmail()).isEqualTo("mina@example.com");
+        verify(userRepository).save(user);
     }
 }

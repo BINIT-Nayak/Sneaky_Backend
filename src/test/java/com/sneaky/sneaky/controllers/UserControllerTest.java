@@ -68,7 +68,7 @@ class UserControllerTest {
                 CreateUserRequestDTO request = new CreateUserRequestDTO();
                 request.setName("Ari");
                 request.setEmail("ari@example.com");
-                request.setPassword("secret123");
+                request.setPassword("Secret@123");
                 request.setIsGuest(false);
 
                 when(authService.authenticate(any(LoginRequestDTO.class)))

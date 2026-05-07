@@ -59,7 +59,7 @@ public class UserController {
     }
 
     @PatchMapping("/me")
-    public UserDTO patchCurrentUser(@RequestBody UpdateUserRequestDTO request) {
+    public UserDTO patchCurrentUser(@Valid @RequestBody UpdateUserRequestDTO request) {
         return userService.patchUserById(currentUser.getUserId(), request);
     }
 
