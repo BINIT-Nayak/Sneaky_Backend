@@ -57,6 +57,6 @@ class WishListRepositoryTest {
         assertThat(query.value())
                 .contains("JOIN FETCH w.product")
                 .contains("LEFT JOIN FETCH p.brand")
-                .contains("ORDER BY w.createdAt DESC");
+                .contains("ORDER BY w.createdAt DESC, w.wishlistId DESC");
     }
 }
