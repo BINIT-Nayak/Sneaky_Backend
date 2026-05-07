@@ -43,4 +43,15 @@ class CartWishlistLogicTest {
         assertThat(createdAtColumn.nullable()).isFalse();
         assertThat(prePersist.getAnnotation(PrePersist.class)).isNotNull();
     }
+
+    @Test
+    void cartCreatedAtIsWritableForLatestAddedOrdering() throws Exception {
+        Column createdAtColumn = Cart.class.getDeclaredField("createdAt").getAnnotation(Column.class);
+        Method prePersist = Cart.class.getDeclaredMethod("prePersist");
+
+        assertThat(createdAtColumn.insertable()).isTrue();
+        assertThat(createdAtColumn.updatable()).isTrue();
+        assertThat(createdAtColumn.nullable()).isFalse();
+        assertThat(prePersist.getAnnotation(PrePersist.class)).isNotNull();
+    }
 }
