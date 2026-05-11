@@ -37,6 +37,9 @@ public class Users {
     @Column(name = "is_guest")
     private Boolean isGuest = false;
 
+    @Column(name = "role", nullable = false, length = 30)
+    private String role = "USER";
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
 }

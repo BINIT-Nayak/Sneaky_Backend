@@ -18,6 +18,7 @@ import com.sneaky.sneaky.dto.wishlist.WishlistItemDTO;
 import com.sneaky.sneaky.security.CurrentUser;
 import com.sneaky.sneaky.services.WishlistService;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -30,7 +31,7 @@ public class WishlistController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public void addToWishlist(@RequestBody AddToWishlistRequestDTO request) {
+    public void addToWishlist(@Valid @RequestBody AddToWishlistRequestDTO request) {
         wishlistService.addToWishlist(currentUser.getUserId(), request.getProductId());
     }
 

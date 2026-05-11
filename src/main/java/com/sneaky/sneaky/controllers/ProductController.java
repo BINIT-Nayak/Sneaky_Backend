@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.sneaky.sneaky.dto.product.*;
 import com.sneaky.sneaky.services.ProductService;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -38,21 +39,21 @@ public class ProductController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ProductDTO createProduct(@RequestBody CreateProductRequestDTO request) {
+    public ProductDTO createProduct(@Valid @RequestBody CreateProductRequestDTO request) {
         return productService.createProduct(request);
     }
 
     @PutMapping("/{id}")
     public ProductDTO updateProduct(
             @PathVariable UUID id,
-            @RequestBody UpdateProductRequestDTO request) {
+            @Valid @RequestBody UpdateProductRequestDTO request) {
         return productService.updateProduct(id, request);
     }
 
     @PatchMapping("/{id}")
     public ProductDTO patchProduct(
             @PathVariable UUID id,
-            @RequestBody UpdateProductRequestDTO request) {
+            @Valid @RequestBody UpdateProductRequestDTO request) {
         return productService.patchProduct(id, request);
     }
 

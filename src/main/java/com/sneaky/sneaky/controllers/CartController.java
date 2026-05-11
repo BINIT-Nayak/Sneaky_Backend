@@ -20,6 +20,7 @@ import com.sneaky.sneaky.dto.cart.UpdateCartQuantityRequestDTO;
 import com.sneaky.sneaky.security.CurrentUser;
 import com.sneaky.sneaky.services.CartService;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -32,7 +33,7 @@ public class CartController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public CartItemDTO addToCart(@RequestBody AddToCartRequestDTO request) {
+    public CartItemDTO addToCart(@Valid @RequestBody AddToCartRequestDTO request) {
         return cartService.addToCart(currentUser.getUserId(), request.getProductId(), request.getQuantity());
     }
 
@@ -44,7 +45,7 @@ public class CartController {
     @PatchMapping("/{productId}")
     public CartItemDTO updateQuantity(
             @PathVariable UUID productId,
-            @RequestBody UpdateCartQuantityRequestDTO request) {
+            @Valid @RequestBody UpdateCartQuantityRequestDTO request) {
         return cartService.updateQuantity(currentUser.getUserId(), productId, request.getQuantity());
     }
 

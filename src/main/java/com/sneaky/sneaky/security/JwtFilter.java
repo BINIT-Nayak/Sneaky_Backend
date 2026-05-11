@@ -1,18 +1,21 @@
 package com.sneaky.sneaky.security;
 
 import java.io.IOException;
-import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import com.sneaky.sneaky.entity.Users;
 import com.sneaky.sneaky.repository.UsersRepository;
 
 import io.jsonwebtoken.JwtException;
@@ -46,14 +49,22 @@ public class JwtFilter extends OncePerRequestFilter {
             String token = authHeader.substring(7);
 
             try {
+                if (!jwtUtil.isAccessToken(token)) {
+                    throw new JwtException("Token is not an access token");
+                }
+
                 UUID userId = jwtUtil.extractUserId(token);
+                Users user = userId == null
+                        ? null
+                        : usersRepository.findById(userId).orElse(null);
 
                 if (userId != null
-                        && usersRepository.existsById(userId)
+                        && user != null
                         && !isLoggedOutToken(userId, token)
                         && SecurityContextHolder.getContext().getAuthentication() == null) {
+                    String role = user.getRole() == null ? "USER" : user.getRole().trim().toUpperCase(Locale.ROOT);
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userId.toString(),
-                            null, Collections.emptyList());
+                            null, List.of(new SimpleGrantedAuthority("ROLE_" + role)));
 
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authentication);

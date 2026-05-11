@@ -17,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sneaky.sneaky.dto.wishlist.AddToWishlistRequestDTO;
@@ -33,7 +34,11 @@ class WishlistControllerTest {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new WishlistController(wishlistService, currentUser)).build();
+        LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
+        validator.afterPropertiesSet();
+        mockMvc = MockMvcBuilders.standaloneSetup(new WishlistController(wishlistService, currentUser))
+                .setValidator(validator)
+                .build();
     }
 
     @Test
@@ -94,6 +99,16 @@ class WishlistControllerTest {
         mockMvc.perform(post("/api/wishlist")
                         .contentType("application/json")
                         .content("{\"productId\":\"not-a-uuid\"}"))
+                .andExpect(status().isBadRequest());
+
+        verify(wishlistService, org.mockito.Mockito.never()).addToWishlist(any(), any());
+    }
+
+    @Test
+    void addToWishlistRejectsMissingProductId() throws Exception {
+        mockMvc.perform(post("/api/wishlist")
+                        .contentType("application/json")
+                        .content("{}"))
                 .andExpect(status().isBadRequest());
 
         verify(wishlistService, org.mockito.Mockito.never()).addToWishlist(any(), any());

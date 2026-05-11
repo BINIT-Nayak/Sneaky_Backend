@@ -20,6 +20,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sneaky.sneaky.dto.product.CreateProductRequestDTO;
@@ -35,7 +36,11 @@ class ProductControllerTest {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new ProductController(productService)).build();
+        LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
+        validator.afterPropertiesSet();
+        mockMvc = MockMvcBuilders.standaloneSetup(new ProductController(productService))
+                .setValidator(validator)
+                .build();
     }
 
     @Test
@@ -61,6 +66,7 @@ class ProductControllerTest {
         UUID productId = UUID.randomUUID();
         CreateProductRequestDTO createRequest = new CreateProductRequestDTO();
         createRequest.setName("Air Max");
+        createRequest.setPrice(BigDecimal.valueOf(12999));
         UpdateProductRequestDTO updateRequest = new UpdateProductRequestDTO();
         updateRequest.setName("Air Max 2");
 
@@ -93,6 +99,20 @@ class ProductControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(productService).deleteProduct(productId);
+    }
+
+    @Test
+    void createProductRejectsInvalidPayloadBeforeServiceCall() throws Exception {
+        CreateProductRequestDTO request = new CreateProductRequestDTO();
+        request.setName("");
+        request.setPrice(BigDecimal.ZERO);
+
+        mockMvc.perform(post("/api/products")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+
+        verify(productService, org.mockito.Mockito.never()).createProduct(any(CreateProductRequestDTO.class));
     }
 
     private static ProductDTO productDto(UUID id, String name) {

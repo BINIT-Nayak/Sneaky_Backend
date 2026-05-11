@@ -18,6 +18,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sneaky.sneaky.dto.cart.AddToCartRequestDTO;
@@ -35,7 +36,11 @@ class CartControllerTest {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new CartController(cartService, currentUser)).build();
+        LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
+        validator.afterPropertiesSet();
+        mockMvc = MockMvcBuilders.standaloneSetup(new CartController(cartService, currentUser))
+                .setValidator(validator)
+                .build();
     }
 
     @Test
@@ -121,6 +126,28 @@ class CartControllerTest {
                 .andExpect(status().isBadRequest());
 
         verify(cartService, org.mockito.Mockito.never()).addToCart(any(), any(), any());
+    }
+
+    @Test
+    void addToCartRejectsMissingProductIdAndInvalidQuantity() throws Exception {
+        mockMvc.perform(post("/api/cart")
+                        .contentType("application/json")
+                        .content("{\"quantity\":0}"))
+                .andExpect(status().isBadRequest());
+
+        verify(cartService, org.mockito.Mockito.never()).addToCart(any(), any(), any());
+    }
+
+    @Test
+    void updateQuantityRejectsMissingQuantity() throws Exception {
+        UUID productId = UUID.randomUUID();
+
+        mockMvc.perform(patch("/api/cart/{productId}", productId)
+                        .contentType("application/json")
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
+
+        verify(cartService, org.mockito.Mockito.never()).updateQuantity(any(), any(), any());
     }
 
     private static CartItemDTO cartItem(UUID productId, int quantity) {

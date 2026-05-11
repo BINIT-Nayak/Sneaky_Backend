@@ -27,9 +27,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.sneaky.sneaky.dto.auth.LoginRequestDTO;
 import com.sneaky.sneaky.dto.auth.LoginResponseDTO;
-import com.sneaky.sneaky.dto.auth.LogoutRequestDTO;
 import com.sneaky.sneaky.dto.auth.LogoutResponseDTO;
-import com.sneaky.sneaky.dto.auth.RefreshRequestDTO;
 import com.sneaky.sneaky.dto.auth.RefreshResponseDTO;
 import com.sneaky.sneaky.entity.Users;
 import com.sneaky.sneaky.repository.UsersRepository;
@@ -90,12 +88,12 @@ class AuthServiceTest {
 
     @Test
     void refreshRejectsBlacklistedRefreshToken() {
-        RefreshRequestDTO request = refreshRequest("refresh-token");
-
+        when(jwtUtil.isRefreshToken("refresh-token")).thenReturn(true);
         when(jwtUtil.extractUserId("refresh-token")).thenReturn(USER_ID);
-        when(redisTemplate.hasKey("auth:blacklist:refresh:refresh-token")).thenReturn(true);
+        when(jwtUtil.extractTokenId("refresh-token")).thenReturn("refresh-token-id");
+        when(redisTemplate.hasKey("auth:blacklist:refresh:refresh-token-id")).thenReturn(true);
 
-        assertThatThrownBy(() -> authService.refresh(request))
+        assertThatThrownBy(() -> authService.refresh("refresh-token"))
                 .isInstanceOf(ResponseStatusException.class)
                 .extracting("statusCode")
                 .isEqualTo(HttpStatus.UNAUTHORIZED);
@@ -103,35 +101,44 @@ class AuthServiceTest {
 
     @Test
     void refreshReturnsNewAccessTokenForValidRefreshToken() {
-        RefreshRequestDTO request = refreshRequest("refresh-token");
-
+        when(jwtUtil.isRefreshToken("refresh-token")).thenReturn(true);
         when(jwtUtil.extractUserId("refresh-token")).thenReturn(USER_ID);
-        when(redisTemplate.hasKey("auth:blacklist:refresh:refresh-token")).thenReturn(false);
+        when(jwtUtil.extractTokenId("refresh-token")).thenReturn("refresh-token-id");
+        when(redisTemplate.hasKey("auth:blacklist:refresh:refresh-token-id")).thenReturn(false);
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         when(valueOperations.get("auth:logout:" + USER_ID)).thenReturn(null);
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user("dev@example.com", "encoded")));
         when(jwtUtil.generateAccessToken(USER_ID)).thenReturn("new-access-token");
 
-        RefreshResponseDTO response = authService.refresh(request);
+        RefreshResponseDTO response = authService.refresh("refresh-token");
 
         assertThat(response.getAccessToken()).isEqualTo("new-access-token");
     }
 
     @Test
-    void logoutBlacklistsRefreshTokenAndStoresLogoutTimestamp() {
-        LogoutRequestDTO request = new LogoutRequestDTO();
-        request.setRefreshToken("refresh-token");
+    void refreshRejectsAccessToken() {
+        when(jwtUtil.isRefreshToken("access-token")).thenReturn(false);
 
+        assertThatThrownBy(() -> authService.refresh("access-token"))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting("statusCode")
+                .isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    void logoutBlacklistsRefreshTokenAndStoresLogoutTimestamp() {
+        when(jwtUtil.isRefreshToken("refresh-token")).thenReturn(true);
         when(jwtUtil.extractUserId("refresh-token")).thenReturn(USER_ID);
+        when(jwtUtil.extractTokenId("refresh-token")).thenReturn("refresh-token-id");
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user("dev@example.com", "encoded")));
         when(jwtUtil.extractExpiration("refresh-token")).thenReturn(new Date(System.currentTimeMillis() + 60_000));
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
 
-        LogoutResponseDTO response = authService.logout(request);
+        LogoutResponseDTO response = authService.logout("refresh-token");
 
         assertThat(response.getMessage()).isEqualTo("Successfully logged out");
         verify(valueOperations).set(
-                eq("auth:blacklist:refresh:refresh-token"),
+                eq("auth:blacklist:refresh:refresh-token-id"),
                 eq(USER_ID.toString()),
                 any(Duration.class));
         verify(valueOperations).set(
@@ -155,9 +162,4 @@ class AuthServiceTest {
         return request;
     }
 
-    private static RefreshRequestDTO refreshRequest(String token) {
-        RefreshRequestDTO request = new RefreshRequestDTO();
-        request.setRefreshToken(token);
-        return request;
-    }
 }

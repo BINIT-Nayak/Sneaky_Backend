@@ -22,8 +22,24 @@ class JwtUtilTest {
         String token = jwtUtil.generateAccessToken(userId);
 
         assertThat(jwtUtil.extractUserId(token)).isEqualTo(userId);
+        assertThat(jwtUtil.extractTokenType(token)).isEqualTo(JwtUtil.ACCESS_TOKEN_TYPE);
+        assertThat(jwtUtil.extractTokenId(token)).isNull();
+        assertThat(jwtUtil.isAccessToken(token)).isTrue();
+        assertThat(jwtUtil.isRefreshToken(token)).isFalse();
         assertThat(jwtUtil.extractIssuedAt(token)).isBeforeOrEqualTo(jwtUtil.extractExpiration(token));
         assertThat(jwtUtil.extractExpiration(token)).isAfter(jwtUtil.extractIssuedAt(token));
+    }
+
+    @Test
+    void generateRefreshTokenHasRefreshTypeAndTokenId() {
+        UUID userId = UUID.randomUUID();
+        String token = jwtUtil.generateRefreshToken(userId);
+
+        assertThat(jwtUtil.extractUserId(token)).isEqualTo(userId);
+        assertThat(jwtUtil.extractTokenType(token)).isEqualTo(JwtUtil.REFRESH_TOKEN_TYPE);
+        assertThat(jwtUtil.extractTokenId(token)).isNotBlank();
+        assertThat(jwtUtil.isAccessToken(token)).isFalse();
+        assertThat(jwtUtil.isRefreshToken(token)).isTrue();
     }
 
     @Test
