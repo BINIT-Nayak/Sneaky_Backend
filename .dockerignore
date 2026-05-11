@@ -1,0 +1,7 @@
+target
+.git
+.env
+.env.*
+.mvn/wrapper/maven-wrapper.jar
+Dockerfile
+README.md
