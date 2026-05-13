@@ -10,6 +10,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.sneaky.sneaky.dto.product.*;
 import com.sneaky.sneaky.entity.Brands;
+import com.sneaky.sneaky.entity.ProductColor;
 import com.sneaky.sneaky.entity.Products;
 import com.sneaky.sneaky.repository.ProductsRepository;
 import com.sneaky.sneaky.repository.BrandsRepository;
@@ -19,6 +20,13 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class ProductService {
+    private static final List<String> DEFAULT_SIZES = List.of("UK 6", "UK 7", "UK 8", "UK 9", "UK 10");
+    private static final List<ProductColorDTO> DEFAULT_COLORS = List.of(
+            new ProductColorDTO("Black", "#17151d"),
+            new ProductColorDTO("Ivory", "#eee4cf"),
+            new ProductColorDTO("Clay", "#c27a58"));
+    private static final String DEFAULT_STOCK_STATUS = "In stock";
+
     private final ProductsRepository productsRepository;
     private final BrandsRepository brandsRepository;
 
@@ -46,6 +54,9 @@ public class ProductService {
         product.setPrice(request.getPrice());
         product.setImageUrl(request.getImageUrl());
         product.setCategory(request.getCategory());
+        product.setSizes(resolveSizes(request.getSizes()));
+        product.setColors(toProductColors(request.getColors()));
+        product.setStockStatus(resolveStockStatus(request.getStockStatus()));
         product.setIsActive(request.getIsActive() != null ? request.getIsActive() : true);
 
         // brand mapping
@@ -70,6 +81,9 @@ public class ProductService {
         product.setPrice(request.getPrice());
         product.setImageUrl(request.getImageUrl());
         product.setCategory(request.getCategory());
+        product.setSizes(resolveSizes(request.getSizes()));
+        product.setColors(toProductColors(request.getColors()));
+        product.setStockStatus(resolveStockStatus(request.getStockStatus()));
         product.setIsActive(request.getIsActive());
 
         if (request.getBrandId() != null) {
@@ -96,6 +110,12 @@ public class ProductService {
             product.setImageUrl(request.getImageUrl());
         if (request.getCategory() != null)
             product.setCategory(request.getCategory());
+        if (request.getSizes() != null)
+            product.setSizes(resolveSizes(request.getSizes()));
+        if (request.getColors() != null)
+            product.setColors(toProductColors(request.getColors()));
+        if (request.getStockStatus() != null)
+            product.setStockStatus(resolveStockStatus(request.getStockStatus()));
         if (request.getIsActive() != null)
             product.setIsActive(request.getIsActive());
 
@@ -131,6 +151,37 @@ public class ProductService {
                 product.getImageUrl(),
                 product.getDescription(),
                 brand == null ? "" : brand.getName(),
-                product.getCategory());
+                product.getCategory(),
+                resolveSizes(product.getSizes()),
+                resolveColors(toColorDtos(product.getColors())),
+                resolveStockStatus(product.getStockStatus()));
+    }
+
+    public static List<String> resolveSizes(List<String> sizes) {
+        return sizes == null || sizes.isEmpty() ? DEFAULT_SIZES : List.copyOf(sizes);
+    }
+
+    public static List<ProductColorDTO> resolveColors(List<ProductColorDTO> colors) {
+        return colors == null || colors.isEmpty() ? DEFAULT_COLORS : List.copyOf(colors);
+    }
+
+    public static String resolveStockStatus(String stockStatus) {
+        return stockStatus == null || stockStatus.isBlank() ? DEFAULT_STOCK_STATUS : stockStatus;
+    }
+
+    public static List<ProductColor> toProductColors(List<ProductColorDTO> colors) {
+        return resolveColors(colors).stream()
+                .map(color -> new ProductColor(color.getName(), color.getValue()))
+                .toList();
+    }
+
+    public static List<ProductColorDTO> toColorDtos(List<ProductColor> colors) {
+        if (colors == null || colors.isEmpty()) {
+            return DEFAULT_COLORS;
+        }
+
+        return colors.stream()
+                .map(color -> new ProductColorDTO(color.getName(), color.getValue()))
+                .toList();
     }
 }

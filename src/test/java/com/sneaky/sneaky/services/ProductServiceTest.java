@@ -21,6 +21,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.sneaky.sneaky.dto.product.CreateProductRequestDTO;
+import com.sneaky.sneaky.dto.product.ProductColorDTO;
 import com.sneaky.sneaky.dto.product.ProductDTO;
 import com.sneaky.sneaky.dto.product.UpdateProductRequestDTO;
 import com.sneaky.sneaky.entity.Brands;
@@ -52,6 +53,9 @@ class ProductServiceTest {
             assertThat(dto.getName()).isEqualTo("Air Max");
             assertThat(dto.getBrand()).isEqualTo("Nike");
             assertThat(dto.getImage()).isEqualTo("image.jpg");
+            assertThat(dto.getSizes()).containsExactly("UK 6", "UK 7", "UK 8", "UK 9", "UK 10");
+            assertThat(dto.getColors()).extracting("name").containsExactly("Black", "Ivory", "Clay");
+            assertThat(dto.getStockStatus()).isEqualTo("In stock");
         });
     }
 
@@ -66,6 +70,9 @@ class ProductServiceTest {
         request.setImageUrl("image.jpg");
         request.setCategory("Sneakers");
         request.setBrandId(brandId);
+        request.setSizes(List.of("UK 8", "UK 9"));
+        request.setColors(List.of(new ProductColorDTO("Green", "#127a52")));
+        request.setStockStatus("Selling fast");
 
         when(brandsRepository.findById(brandId)).thenReturn(Optional.of(brand));
         when(productsRepository.save(any(Products.class))).thenAnswer(invocation -> {
@@ -79,6 +86,12 @@ class ProductServiceTest {
         ArgumentCaptor<Products> captor = ArgumentCaptor.forClass(Products.class);
         verify(productsRepository).save(captor.capture());
         assertThat(captor.getValue().getBrand()).isEqualTo(brand);
+        assertThat(captor.getValue().getSizes()).containsExactly("UK 8", "UK 9");
+        assertThat(captor.getValue().getColors()).singleElement().satisfies(color -> {
+            assertThat(color.getName()).isEqualTo("Green");
+            assertThat(color.getValue()).isEqualTo("#127a52");
+        });
+        assertThat(captor.getValue().getStockStatus()).isEqualTo("Selling fast");
         assertThat(captor.getValue().getIsActive()).isTrue();
         assertThat(created.getBrand()).isEqualTo("Nike");
     }

@@ -1,7 +1,10 @@
 package com.sneaky.sneaky.dto.cart;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
+
+import com.sneaky.sneaky.dto.product.ProductColorDTO;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -19,4 +22,7 @@ public class CartItemDTO {
     private String brandName;
     private Integer quantity;
     private BigDecimal itemTotal;
+    private List<String> sizes;
+    private List<ProductColorDTO> colors;
+    private String stockStatus;
 }

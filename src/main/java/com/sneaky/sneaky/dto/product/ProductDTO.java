@@ -1,6 +1,7 @@
 package com.sneaky.sneaky.dto.product;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 import lombok.AllArgsConstructor;
@@ -16,4 +17,7 @@ public class ProductDTO {
     private String description;
     private String brand;
     private String category;
+    private List<String> sizes;
+    private List<ProductColorDTO> colors;
+    private String stockStatus;
 }

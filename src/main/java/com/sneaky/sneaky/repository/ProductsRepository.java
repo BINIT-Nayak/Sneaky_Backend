@@ -11,4 +11,6 @@ import com.sneaky.sneaky.entity.Products;
 @Repository
 public interface ProductsRepository extends JpaRepository<Products, UUID> {
     List<Products> findByIsActiveTrueOrderByCreatedAtDesc();
+
+    long countByIsActiveTrue();
 }

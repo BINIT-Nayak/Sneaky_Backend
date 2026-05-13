@@ -160,6 +160,9 @@ class CartControllerTest {
                 "image.jpg",
                 "Nike",
                 quantity,
-                price.multiply(BigDecimal.valueOf(quantity)));
+                price.multiply(BigDecimal.valueOf(quantity)),
+                List.of("UK 8", "UK 9"),
+                List.of(new com.sneaky.sneaky.dto.product.ProductColorDTO("Black", "#17151d")),
+                "In stock");
     }
 }

@@ -28,4 +28,11 @@ class ProductsRepositoryTest {
         assertThat(method.getReturnType()).isEqualTo(List.class);
         assertThat(method.getGenericReturnType().getTypeName()).contains(Products.class.getName());
     }
+
+    @Test
+    void countByIsActiveTrueHasExpectedSpringDataContract() throws Exception {
+        Method method = ProductsRepository.class.getMethod("countByIsActiveTrue");
+
+        assertThat(method.getReturnType()).isEqualTo(long.class);
+    }
 }

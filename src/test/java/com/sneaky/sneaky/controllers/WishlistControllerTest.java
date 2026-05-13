@@ -67,7 +67,10 @@ class WishlistControllerTest {
                 "Air Max",
                 BigDecimal.valueOf(12999),
                 "image.jpg",
-                "Nike");
+                "Nike",
+                List.of("UK 8", "UK 9"),
+                List.of(new com.sneaky.sneaky.dto.product.ProductColorDTO("Black", "#17151d")),
+                "In stock");
 
         when(currentUser.getUserId()).thenReturn(userId);
         when(wishlistService.getWishlist(userId)).thenReturn(List.of(item));

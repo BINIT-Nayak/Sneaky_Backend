@@ -3,6 +3,7 @@ package com.sneaky.sneaky.dto;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -11,6 +12,7 @@ import com.sneaky.sneaky.dto.cart.AddToCartRequestDTO;
 import com.sneaky.sneaky.dto.cart.CartItemDTO;
 import com.sneaky.sneaky.dto.cart.UpdateCartQuantityRequestDTO;
 import com.sneaky.sneaky.dto.product.CreateProductRequestDTO;
+import com.sneaky.sneaky.dto.product.ProductColorDTO;
 import com.sneaky.sneaky.dto.product.ProductDTO;
 import com.sneaky.sneaky.dto.wishlist.AddToWishlistRequestDTO;
 import com.sneaky.sneaky.dto.wishlist.WishlistItemDTO;
@@ -34,11 +36,17 @@ class CommerceDtoContractTest {
                 "image.jpg",
                 "Comfortable",
                 "Nike",
-                "Sneakers");
+                "Sneakers",
+                List.of("UK 8", "UK 9"),
+                List.of(new ProductColorDTO("Black", "#17151d")),
+                "Only a few left");
 
         assertThat(product.getId()).isEqualTo(productId);
         assertThat(product.getImage()).isEqualTo("image.jpg");
         assertThat(product.getBrand()).isEqualTo("Nike");
+        assertThat(product.getSizes()).containsExactly("UK 8", "UK 9");
+        assertThat(product.getColors()).singleElement().extracting("value").isEqualTo("#17151d");
+        assertThat(product.getStockStatus()).isEqualTo("Only a few left");
     }
 
     @Test
@@ -54,7 +62,10 @@ class CommerceDtoContractTest {
                 "image.jpg",
                 "Nike",
                 2,
-                BigDecimal.valueOf(25998));
+                BigDecimal.valueOf(25998),
+                List.of("UK 8", "UK 9"),
+                List.of(new ProductColorDTO("Black", "#17151d")),
+                "In stock");
 
         addRequest.setProductId(productId);
         addRequest.setQuantity(2);
@@ -77,7 +88,10 @@ class CommerceDtoContractTest {
                 "Air Max",
                 BigDecimal.valueOf(12999),
                 "image.jpg",
-                "Nike");
+                "Nike",
+                List.of("UK 8", "UK 9"),
+                List.of(new ProductColorDTO("Black", "#17151d")),
+                "In stock");
 
         request.setProductId(productId);
 

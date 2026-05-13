@@ -123,6 +123,9 @@ class ProductControllerTest {
                 "image.jpg",
                 "Comfortable",
                 "Nike",
-                "Sneakers");
+                "Sneakers",
+                List.of("UK 8", "UK 9"),
+                List.of(new com.sneaky.sneaky.dto.product.ProductColorDTO("Black", "#17151d")),
+                "Selling fast");
     }
 }

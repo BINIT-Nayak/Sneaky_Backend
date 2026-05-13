@@ -2,9 +2,13 @@ package com.sneaky.sneaky.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -46,6 +50,7 @@ public class Products {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
 
+    @Builder.Default
     private String currency = "INR";
 
     private String category;
@@ -53,6 +58,22 @@ public class Products {
     @Column(name = "image_url")
     private String imageUrl;
 
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(name = "product_sizes", joinColumns = @JoinColumn(name = "product_id"))
+    @Column(name = "size", nullable = false)
+    @Builder.Default
+    private List<String> sizes = new ArrayList<>();
+
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(name = "product_colors", joinColumns = @JoinColumn(name = "product_id"))
+    @Builder.Default
+    private List<ProductColor> colors = new ArrayList<>();
+
+    @Column(name = "stock_status")
+    @Builder.Default
+    private String stockStatus = "In stock";
+
+    @Builder.Default
     private Boolean isActive = true;
 
     @Column(name = "created_at", insertable = false, updatable = false)

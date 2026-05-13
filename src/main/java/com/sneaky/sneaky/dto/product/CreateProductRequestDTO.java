@@ -1,8 +1,10 @@
 package com.sneaky.sneaky.dto.product;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -29,6 +31,14 @@ public class CreateProductRequestDTO {
 
     @Size(max = 80, message = "Category must be at most 80 characters")
     private String category;
+
+    private List<@NotBlank(message = "Size cannot be blank") @Size(max = 20, message = "Size must be at most 20 characters") String> sizes;
+
+    @Valid
+    private List<ProductColorDTO> colors;
+
+    @Size(max = 40, message = "Stock status must be at most 40 characters")
+    private String stockStatus;
 
     private UUID brandId;
 
