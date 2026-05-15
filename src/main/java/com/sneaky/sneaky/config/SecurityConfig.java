@@ -15,16 +15,20 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.sneaky.sneaky.security.JwtFilter;
+import com.sneaky.sneaky.security.RateLimitFilter;
 
 @Configuration
 public class SecurityConfig {
     private final JwtFilter jwtFilter;
+    private final RateLimitFilter rateLimitFilter;
     private final List<String> allowedOrigins;
 
     public SecurityConfig(
             JwtFilter jwtFilter,
+            RateLimitFilter rateLimitFilter,
             @Value("#{'${app.cors.allowed-origins}'.split(',')}") List<String> allowedOrigins) {
         this.jwtFilter = jwtFilter;
+        this.rateLimitFilter = rateLimitFilter;
         this.allowedOrigins = allowedOrigins.stream()
                 .map(String::trim)
                 .filter(origin -> !origin.isBlank())
@@ -48,7 +52,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/products/**").hasRole("ADMIN")
                         .requestMatchers("/api/brands/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(rateLimitFilter, JwtFilter.class);
 
         return http.build();
     }
