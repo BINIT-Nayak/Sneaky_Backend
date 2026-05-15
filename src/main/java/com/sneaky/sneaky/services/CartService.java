@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.sneaky.sneaky.dto.analytics.UserActivityEventType;
 import com.sneaky.sneaky.dto.cart.CartItemDTO;
 import com.sneaky.sneaky.entity.Cart;
 import com.sneaky.sneaky.entity.Products;
@@ -17,6 +18,8 @@ import com.sneaky.sneaky.entity.Users;
 import com.sneaky.sneaky.repository.CartRepository;
 import com.sneaky.sneaky.repository.ProductsRepository;
 import com.sneaky.sneaky.repository.UsersRepository;
+import com.sneaky.sneaky.services.analytics.ActivityEventPublisher;
+import com.sneaky.sneaky.services.analytics.UserActivityEventFactory;
 
 import lombok.RequiredArgsConstructor;
 
@@ -27,6 +30,8 @@ public class CartService {
     private final CartRepository cartRepository;
     private final UsersRepository usersRepository;
     private final ProductsRepository productsRepository;
+    private final ActivityEventPublisher activityEventPublisher;
+    private final UserActivityEventFactory activityEventFactory;
 
     @Transactional
     public CartItemDTO addToCart(UUID userId, UUID productId, Integer requestedQuantity) {
@@ -51,7 +56,9 @@ public class CartService {
                         .createdAt(LocalDateTime.now())
                         .build());
 
-        return toDto(cartRepository.save(cart));
+        Cart saved = cartRepository.save(cart);
+        publishCartEvent(UserActivityEventType.CART_ADDED, userId, productId, quantity);
+        return toDto(saved);
     }
 
     @Transactional(readOnly = true)
@@ -74,7 +81,9 @@ public class CartService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         cart.setQuantity(quantity);
-        return toDto(cartRepository.save(cart));
+        Cart saved = cartRepository.save(cart);
+        publishCartEvent(UserActivityEventType.CART_QUANTITY_UPDATED, userId, productId, quantity);
+        return toDto(saved);
     }
 
     @Transactional
@@ -86,6 +95,7 @@ public class CartService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         cartRepository.delete(cart);
+        publishCartEvent(UserActivityEventType.CART_REMOVED, userId, productId, null);
     }
 
     @Transactional
@@ -134,5 +144,9 @@ public class CartService {
                 ProductService.resolveSizes(product.getSizes()),
                 ProductService.toColorDtos(product.getColors()),
                 ProductService.resolveStockStatus(product.getStockStatus()));
+    }
+
+    private void publishCartEvent(UserActivityEventType eventType, UUID userId, UUID productId, Integer quantity) {
+        activityEventPublisher.publish(activityEventFactory.create(eventType, userId, productId, quantity));
     }
 }

@@ -30,6 +30,8 @@ import com.sneaky.sneaky.entity.Users;
 import com.sneaky.sneaky.repository.CartRepository;
 import com.sneaky.sneaky.repository.ProductsRepository;
 import com.sneaky.sneaky.repository.UsersRepository;
+import com.sneaky.sneaky.services.analytics.ActivityEventPublisher;
+import com.sneaky.sneaky.services.analytics.UserActivityEventFactory;
 
 @ExtendWith(MockitoExtension.class)
 class CartServiceTest {
@@ -42,6 +44,12 @@ class CartServiceTest {
 
     @Mock
     private ProductsRepository productsRepository;
+
+    @Mock
+    private ActivityEventPublisher activityEventPublisher;
+
+    @Mock
+    private UserActivityEventFactory activityEventFactory;
 
     @InjectMocks
     private CartService cartService;

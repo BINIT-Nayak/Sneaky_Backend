@@ -28,6 +28,8 @@ import com.sneaky.sneaky.entity.Brands;
 import com.sneaky.sneaky.entity.Products;
 import com.sneaky.sneaky.repository.BrandsRepository;
 import com.sneaky.sneaky.repository.ProductsRepository;
+import com.sneaky.sneaky.services.analytics.ActivityEventPublisher;
+import com.sneaky.sneaky.services.analytics.UserActivityEventFactory;
 
 @ExtendWith(MockitoExtension.class)
 class ProductServiceTest {
@@ -37,6 +39,12 @@ class ProductServiceTest {
 
     @Mock
     private BrandsRepository brandsRepository;
+
+    @Mock
+    private ActivityEventPublisher activityEventPublisher;
+
+    @Mock
+    private UserActivityEventFactory activityEventFactory;
 
     @InjectMocks
     private ProductService productService;

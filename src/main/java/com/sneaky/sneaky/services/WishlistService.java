@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.sneaky.sneaky.dto.analytics.UserActivityEventType;
 import com.sneaky.sneaky.dto.wishlist.WishlistItemDTO;
 import com.sneaky.sneaky.entity.Products;
 import com.sneaky.sneaky.entity.Users;
@@ -16,6 +17,8 @@ import com.sneaky.sneaky.entity.WishList;
 import com.sneaky.sneaky.repository.ProductsRepository;
 import com.sneaky.sneaky.repository.UsersRepository;
 import com.sneaky.sneaky.repository.WishListRepository;
+import com.sneaky.sneaky.services.analytics.ActivityEventPublisher;
+import com.sneaky.sneaky.services.analytics.UserActivityEventFactory;
 
 import lombok.RequiredArgsConstructor;
 
@@ -26,6 +29,8 @@ public class WishlistService {
     private final WishListRepository wishListRepository;
     private final UsersRepository usersRepository;
     private final ProductsRepository productsRepository;
+    private final ActivityEventPublisher activityEventPublisher;
+    private final UserActivityEventFactory activityEventFactory;
 
     @Transactional
     public void addToWishlist(UUID userId, UUID productId) {
@@ -42,6 +47,7 @@ public class WishlistService {
         if (existing != null) {
             existing.setCreatedAt(LocalDateTime.now());
             wishListRepository.save(existing);
+            publishWishlistEvent(UserActivityEventType.WISHLIST_ADDED, userId, productId);
             return;
         }
 
@@ -52,6 +58,7 @@ public class WishlistService {
                 .build();
 
         wishListRepository.save(wishlist);
+        publishWishlistEvent(UserActivityEventType.WISHLIST_ADDED, userId, productId);
     }
 
     @Transactional(readOnly = true)
@@ -92,5 +99,10 @@ public class WishlistService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         wishListRepository.delete(wishlist);
+        publishWishlistEvent(UserActivityEventType.WISHLIST_REMOVED, userId, productId);
+    }
+
+    private void publishWishlistEvent(UserActivityEventType eventType, UUID userId, UUID productId) {
+        activityEventPublisher.publish(activityEventFactory.create(eventType, userId, productId, null));
     }
 }

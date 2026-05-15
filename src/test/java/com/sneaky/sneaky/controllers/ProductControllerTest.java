@@ -49,7 +49,7 @@ class ProductControllerTest {
         ProductDTO product = productDto(productId, "Air Max");
 
         when(productService.getActiveProducts()).thenReturn(List.of(product));
-        when(productService.getProductById(productId)).thenReturn(product);
+        when(productService.getProductById(productId, null)).thenReturn(product);
 
         mockMvc.perform(get("/api/products"))
                 .andExpect(status().isOk())

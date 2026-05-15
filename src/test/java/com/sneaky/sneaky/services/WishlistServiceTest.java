@@ -29,6 +29,8 @@ import com.sneaky.sneaky.entity.WishList;
 import com.sneaky.sneaky.repository.ProductsRepository;
 import com.sneaky.sneaky.repository.UsersRepository;
 import com.sneaky.sneaky.repository.WishListRepository;
+import com.sneaky.sneaky.services.analytics.ActivityEventPublisher;
+import com.sneaky.sneaky.services.analytics.UserActivityEventFactory;
 
 @ExtendWith(MockitoExtension.class)
 class WishlistServiceTest {
@@ -41,6 +43,12 @@ class WishlistServiceTest {
 
     @Mock
     private ProductsRepository productsRepository;
+
+    @Mock
+    private ActivityEventPublisher activityEventPublisher;
+
+    @Mock
+    private UserActivityEventFactory activityEventFactory;
 
     @InjectMocks
     private WishlistService wishlistService;

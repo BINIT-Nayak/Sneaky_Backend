@@ -8,12 +8,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.sneaky.sneaky.dto.analytics.UserActivityEventType;
 import com.sneaky.sneaky.dto.product.*;
 import com.sneaky.sneaky.entity.Brands;
 import com.sneaky.sneaky.entity.ProductColor;
 import com.sneaky.sneaky.entity.Products;
 import com.sneaky.sneaky.repository.ProductsRepository;
 import com.sneaky.sneaky.repository.BrandsRepository;
+import com.sneaky.sneaky.services.analytics.ActivityEventPublisher;
+import com.sneaky.sneaky.services.analytics.UserActivityEventFactory;
 
 import lombok.RequiredArgsConstructor;
 
@@ -29,6 +32,8 @@ public class ProductService {
 
     private final ProductsRepository productsRepository;
     private final BrandsRepository brandsRepository;
+    private final ActivityEventPublisher activityEventPublisher;
+    private final UserActivityEventFactory activityEventFactory;
 
     @Transactional(readOnly = true)
     public List<ProductDTO> getActiveProducts() {
@@ -42,6 +47,30 @@ public class ProductService {
     public ProductDTO getProductById(UUID id) {
         Products product = getProductEntity(id);
         return toDTO(product);
+    }
+
+    @Transactional(readOnly = true)
+    public ProductDTO getProductById(UUID id, UUID viewerUserId) {
+        Products product = getProductEntity(id);
+        publishProductEvent(UserActivityEventType.PRODUCT_VIEWED, viewerUserId, id, null);
+        return toDTO(product);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProductDTO> getProductsByIdsPreservingOrder(List<UUID> productIds) {
+        if (productIds == null || productIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<Products> products = productsRepository.findAllById(productIds);
+
+        return productIds.stream()
+                .flatMap(productId -> products.stream()
+                        .filter(product -> productId.equals(product.getProductId()))
+                        .findFirst()
+                        .stream())
+                .map(this::toDTO)
+                .toList();
     }
 
     @Transactional
@@ -183,5 +212,13 @@ public class ProductService {
         return colors.stream()
                 .map(color -> new ProductColorDTO(color.getName(), color.getValue()))
                 .toList();
+    }
+
+    private void publishProductEvent(
+            UserActivityEventType eventType,
+            UUID userId,
+            UUID productId,
+            Integer quantity) {
+        activityEventPublisher.publish(activityEventFactory.create(eventType, userId, productId, quantity));
     }
 }

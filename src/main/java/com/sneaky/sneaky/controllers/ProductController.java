@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -33,8 +34,8 @@ public class ProductController {
     }
 
     @GetMapping("/{id}")
-    public ProductDTO getProduct(@PathVariable UUID id) {
-        return productService.getProductById(id);
+    public ProductDTO getProduct(@PathVariable UUID id, Authentication authentication) {
+        return productService.getProductById(id, authenticatedUserId(authentication));
     }
 
     @PostMapping
@@ -61,5 +62,17 @@ public class ProductController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteProduct(@PathVariable UUID id) {
         productService.deleteProduct(id);
+    }
+
+    private UUID authenticatedUserId(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return null;
+        }
+
+        try {
+            return UUID.fromString(authentication.getName());
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 }
