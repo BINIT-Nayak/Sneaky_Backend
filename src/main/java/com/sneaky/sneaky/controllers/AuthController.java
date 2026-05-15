@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.sneaky.sneaky.dto.auth.AuthTokensDTO;
 import com.sneaky.sneaky.dto.auth.LoginRequestDTO;
 import com.sneaky.sneaky.dto.auth.LoginResponseDTO;
 import com.sneaky.sneaky.dto.auth.LogoutResponseDTO;
@@ -47,8 +48,8 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO loginRequest) {
-        LoginResponseDTO response = authService.authenticate(loginRequest);
-        return withRefreshCookie(response);
+        AuthTokensDTO tokens = authService.authenticate(loginRequest);
+        return withRefreshCookie(tokens);
     }
 
     @PostMapping("/refresh")
@@ -68,14 +69,14 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<LoginResponseDTO> register(@Valid @RequestBody CreateUserRequestDTO request) {
-        LoginResponseDTO response = authService.register(request);
-        return withRefreshCookie(response);
+        AuthTokensDTO tokens = authService.register(request);
+        return withRefreshCookie(tokens);
     }
 
-    private ResponseEntity<LoginResponseDTO> withRefreshCookie(LoginResponseDTO response) {
+    private ResponseEntity<LoginResponseDTO> withRefreshCookie(AuthTokensDTO tokens) {
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, refreshCookie(response.getRefreshToken()).toString())
-                .body(response);
+                .header(HttpHeaders.SET_COOKIE, refreshCookie(tokens.getRefreshToken()).toString())
+                .body(tokens.toLoginResponse());
     }
 
     private String requireRefreshToken(String refreshToken) {

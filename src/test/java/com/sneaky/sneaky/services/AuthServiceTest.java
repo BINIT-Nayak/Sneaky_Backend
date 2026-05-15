@@ -25,8 +25,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.sneaky.sneaky.dto.auth.AuthTokensDTO;
 import com.sneaky.sneaky.dto.auth.LoginRequestDTO;
-import com.sneaky.sneaky.dto.auth.LoginResponseDTO;
 import com.sneaky.sneaky.dto.auth.LogoutResponseDTO;
 import com.sneaky.sneaky.dto.auth.RefreshResponseDTO;
 import com.sneaky.sneaky.entity.Users;
@@ -65,7 +65,7 @@ class AuthServiceTest {
         when(jwtUtil.generateAccessToken(USER_ID)).thenReturn("access-token");
         when(jwtUtil.generateRefreshToken(USER_ID)).thenReturn("refresh-token");
 
-        LoginResponseDTO response = authService.authenticate(request);
+        AuthTokensDTO response = authService.authenticate(request);
 
         assertThat(response.getAccessToken()).isEqualTo("access-token");
         assertThat(response.getRefreshToken()).isEqualTo("refresh-token");

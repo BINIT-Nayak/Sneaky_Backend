@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.sneaky.sneaky.dto.auth.LoginRequestDTO;
-import com.sneaky.sneaky.dto.auth.LoginResponseDTO;
+import com.sneaky.sneaky.dto.auth.AuthTokensDTO;
 import com.sneaky.sneaky.dto.auth.LogoutResponseDTO;
 import com.sneaky.sneaky.dto.auth.RefreshResponseDTO;
 import com.sneaky.sneaky.dto.user.CreateUserRequestDTO;
@@ -31,7 +31,7 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final StringRedisTemplate redisTemplate;
 
-    public LoginResponseDTO authenticate(LoginRequestDTO loginRequest) {
+    public AuthTokensDTO authenticate(LoginRequestDTO loginRequest) {
         String normalizedEmail = loginRequest.getEmail().trim().toLowerCase(Locale.ROOT);
 
         Users user = userRepository.findByEmail(normalizedEmail)
@@ -44,7 +44,7 @@ public class AuthService {
         String accessToken = jwtUtil.generateAccessToken(user.getUserId());
         String refreshToken = jwtUtil.generateRefreshToken(user.getUserId());
 
-        return new LoginResponseDTO(accessToken, refreshToken);
+        return new AuthTokensDTO(accessToken, refreshToken);
     }
 
     public RefreshResponseDTO refresh(String refreshToken) {
@@ -117,13 +117,13 @@ public class AuthService {
         return "auth:blacklist:refresh:" + tokenId;
     }
 
-    public LoginResponseDTO register(CreateUserRequestDTO request) {
+    public AuthTokensDTO register(CreateUserRequestDTO request) {
 
         Users user = userService.createUser(request);
 
         String accessToken = jwtUtil.generateAccessToken(user.getUserId());
         String refreshToken = jwtUtil.generateRefreshToken(user.getUserId());
 
-        return new LoginResponseDTO(accessToken, refreshToken);
+        return new AuthTokensDTO(accessToken, refreshToken);
     }
 }

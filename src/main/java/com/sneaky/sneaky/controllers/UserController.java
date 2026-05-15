@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.HttpStatus;
 
+import com.sneaky.sneaky.dto.auth.AuthTokensDTO;
 import com.sneaky.sneaky.dto.auth.LoginRequestDTO;
 import com.sneaky.sneaky.dto.auth.LoginResponseDTO;
 import com.sneaky.sneaky.dto.user.*;
@@ -45,7 +46,8 @@ public class UserController {
         loginRequest.setEmail(request.getEmail());
         loginRequest.setPassword(request.getPassword());
 
-        return authService.authenticate(loginRequest);
+        AuthTokensDTO tokens = authService.authenticate(loginRequest);
+        return tokens.toLoginResponse();
     }
 
     @GetMapping("/me")

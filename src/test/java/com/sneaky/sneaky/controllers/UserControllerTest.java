@@ -22,8 +22,8 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sneaky.sneaky.dto.auth.AuthTokensDTO;
 import com.sneaky.sneaky.dto.auth.LoginRequestDTO;
-import com.sneaky.sneaky.dto.auth.LoginResponseDTO;
 import com.sneaky.sneaky.dto.user.CreateUserRequestDTO;
 import com.sneaky.sneaky.dto.user.UpdateUserRequestDTO;
 import com.sneaky.sneaky.dto.user.UserDTO;
@@ -71,13 +71,14 @@ class UserControllerTest {
                 request.setIsGuest(false);
 
                 when(authService.authenticate(any(LoginRequestDTO.class)))
-                                .thenReturn(new LoginResponseDTO("access", "refresh"));
+                                .thenReturn(new AuthTokensDTO("access", "refresh"));
 
                 mockMvc.perform(post("/api/users")
                                 .contentType("application/json")
                                 .content(objectMapper.writeValueAsString(request)))
                                 .andExpect(status().isOk())
-                                .andExpect(jsonPath("$.accessToken").value("access"));
+                                .andExpect(jsonPath("$.accessToken").value("access"))
+                                .andExpect(jsonPath("$.refreshToken").doesNotExist());
 
                 verify(userService).createUser(any(CreateUserRequestDTO.class));
                 verify(authService).authenticate(any(LoginRequestDTO.class));

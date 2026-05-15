@@ -17,8 +17,8 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sneaky.sneaky.dto.auth.AuthTokensDTO;
 import com.sneaky.sneaky.dto.auth.LoginRequestDTO;
-import com.sneaky.sneaky.dto.auth.LoginResponseDTO;
 import com.sneaky.sneaky.dto.auth.LogoutResponseDTO;
 import com.sneaky.sneaky.dto.auth.RefreshResponseDTO;
 import com.sneaky.sneaky.services.AuthService;
@@ -48,13 +48,14 @@ class AuthControllerTest {
                 request.setPassword("secret123");
 
                 when(authService.authenticate(any(LoginRequestDTO.class)))
-                                .thenReturn(new LoginResponseDTO("access", "refresh"));
+                                .thenReturn(new AuthTokensDTO("access", "refresh"));
 
                 mockMvc.perform(post("/api/auth/login")
                                 .contentType("application/json")
                                 .content(objectMapper.writeValueAsString(request)))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.accessToken").value("access"))
+                                .andExpect(jsonPath("$.refreshToken").doesNotExist())
                                 .andExpect(cookie().httpOnly(REFRESH_COOKIE_NAME, true))
                                 .andExpect(cookie().value(REFRESH_COOKIE_NAME, "refresh"));
 
