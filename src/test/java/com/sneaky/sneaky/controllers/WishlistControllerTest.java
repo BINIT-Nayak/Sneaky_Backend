@@ -68,6 +68,7 @@ class WishlistControllerTest {
                 BigDecimal.valueOf(12999),
                 "image.jpg",
                 "Nike",
+                "Running",
                 List.of("UK 8", "UK 9"),
                 List.of(new com.sneaky.sneaky.dto.product.ProductColorDTO("Black", "#17151d")),
                 "In stock");
@@ -81,7 +82,8 @@ class WishlistControllerTest {
                 .andExpect(jsonPath("$[0].name").value("Air Max"))
                 .andExpect(jsonPath("$[0].price").value(12999))
                 .andExpect(jsonPath("$[0].imageUrl").value("image.jpg"))
-                .andExpect(jsonPath("$[0].brandName").value("Nike"));
+                .andExpect(jsonPath("$[0].brandName").value("Nike"))
+                .andExpect(jsonPath("$[0].category").value("Running"));
     }
 
     @Test

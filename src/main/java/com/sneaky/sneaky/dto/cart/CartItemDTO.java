@@ -20,6 +20,7 @@ public class CartItemDTO {
     private String currency;
     private String imageUrl;
     private String brandName;
+    private String category;
     private Integer quantity;
     private BigDecimal itemTotal;
     private List<String> sizes;

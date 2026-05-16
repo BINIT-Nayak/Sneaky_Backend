@@ -66,6 +66,12 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
+    public void recordProductPass(UUID id, UUID viewerUserId) {
+        getProductEntity(id);
+        publishProductEvent(UserActivityEventType.PRODUCT_PASSED, viewerUserId, id, null);
+    }
+
+    @Transactional(readOnly = true)
     public List<ProductDTO> getProductsByIdsPreservingOrder(List<UUID> productIds) {
         if (productIds == null || productIds.isEmpty()) {
             return List.of();

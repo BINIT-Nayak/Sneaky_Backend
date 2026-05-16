@@ -84,6 +84,28 @@ class ProductRecommendationServiceTest {
                 .containsExactly("Recommended Nike", "Popular Adidas", "Saved Nike");
     }
 
+    @Test
+    void userRecommendationsPenalizeCategoriesTheUserPassed() {
+        Users user = user();
+        Products passedRunner = product("Passed Runner", "Nike", "Running", BigDecimal.valueOf(10000), 3);
+        Products anotherRunner = product("Another Runner", "Asics", "Running", BigDecimal.valueOf(11000), 2);
+        Products lifestylePair = product("Lifestyle Pair", "Vans", "Lifestyle", BigDecimal.valueOf(9000), 1);
+
+        when(productsRepository.findByIsActiveTrueOrderByCreatedAtDesc())
+                .thenReturn(List.of(anotherRunner, lifestylePair, passedRunner));
+        when(usersRepository.findById(user.getUserId())).thenReturn(Optional.of(user));
+        when(wishListRepository.findByUserWithProductAndBrand(user)).thenReturn(List.of());
+        when(cartRepository.findByUserWithProductAndBrand(user)).thenReturn(List.of());
+        when(productAnalyticsService.getPassedProductIds(user.getUserId()))
+                .thenReturn(List.of(passedRunner.getProductId()));
+        when(productsRepository.findAllById(List.of(passedRunner.getProductId())))
+                .thenReturn(List.of(passedRunner));
+
+        assertThat(recommendationService.getRecommendedProducts(user.getUserId()))
+                .extracting(Products::getName)
+                .containsExactly("Lifestyle Pair", "Another Runner", "Passed Runner");
+    }
+
     private static Users user() {
         Users user = new Users();
         user.setUserId(UUID.randomUUID());

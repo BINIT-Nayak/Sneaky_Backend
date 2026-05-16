@@ -128,6 +128,7 @@ class CartServiceTest {
             assertThat(item.getCurrency()).isEqualTo("INR");
             assertThat(item.getImageUrl()).isEqualTo("image.jpg");
             assertThat(item.getBrandName()).isEqualTo("Nike");
+            assertThat(item.getCategory()).isEqualTo("Running");
             assertThat(item.getQuantity()).isEqualTo(2);
             assertThat(item.getItemTotal()).isEqualByComparingTo(BigDecimal.valueOf(25998));
         });
@@ -241,6 +242,7 @@ class CartServiceTest {
         product.setPrice(BigDecimal.valueOf(12999));
         product.setCurrency("INR");
         product.setImageUrl("image.jpg");
+        product.setCategory("Running");
         product.setBrand(brand);
         return product;
     }

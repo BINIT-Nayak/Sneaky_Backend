@@ -160,6 +160,7 @@ The recommendation service ranks active products using:
 - Wishlist history
 - Cart history
 - Recently viewed products
+- Products and categories the user passed
 - Brand similarity
 - Category similarity
 - Similar price range
@@ -216,6 +217,14 @@ Available analytics endpoints:
 - `GET /api/product-analytics/recently-viewed`
 
 Product views are tracked when an authenticated request calls `GET /api/products/{id}`.
+
+Home feed passes are tracked with:
+
+```http
+POST /api/product-analytics/products/{productId}/pass
+```
+
+Passed products are stored per user in Redis and used by the recommendation model to reduce similar categories and brands.
 
 ## ❤️ Wishlist API
 

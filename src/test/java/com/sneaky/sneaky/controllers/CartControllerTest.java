@@ -159,6 +159,7 @@ class CartControllerTest {
                 "INR",
                 "image.jpg",
                 "Nike",
+                "Running",
                 quantity,
                 price.multiply(BigDecimal.valueOf(quantity)),
                 List.of("UK 8", "UK 9"),

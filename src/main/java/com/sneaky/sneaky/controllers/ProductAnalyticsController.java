@@ -5,8 +5,11 @@ import java.util.UUID;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
 
 import com.sneaky.sneaky.dto.analytics.ProductAnalyticsDTO;
 import com.sneaky.sneaky.dto.product.ProductDTO;
@@ -33,5 +36,11 @@ public class ProductAnalyticsController {
     public List<ProductDTO> getRecentlyViewed() {
         List<UUID> productIds = productAnalyticsService.getRecentlyViewedProductIds(currentUser.getUserId());
         return productService.getProductsByIdsPreservingOrder(productIds);
+    }
+
+    @PostMapping("/products/{productId}/pass")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void recordProductPass(@PathVariable UUID productId) {
+        productService.recordProductPass(productId, currentUser.getUserId());
     }
 }

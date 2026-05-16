@@ -33,7 +33,10 @@ public class ProductRecommendationService {
     private static final double CATEGORY_MATCH_SCORE = 5.0;
     private static final double PRICE_MATCH_SCORE = 3.0;
     private static final double POPULARITY_SCORE = 2.0;
+    private static final double PASSED_BRAND_PENALTY = 6.0;
+    private static final double PASSED_CATEGORY_PENALTY = 10.0;
     private static final double VIEWED_EXACT_PRODUCT_PENALTY = 12.0;
+    private static final double PASSED_EXACT_PRODUCT_PENALTY = 35.0;
     private static final double OWNED_EXACT_PRODUCT_PENALTY = 50.0;
     private static final BigDecimal PRICE_RANGE_RATIO = BigDecimal.valueOf(0.25);
     private static final int POPULAR_PRODUCT_LIMIT = 100;
@@ -73,26 +76,30 @@ public class ProductRecommendationService {
                 .map(Cart::getProduct)
                 .toList();
         List<Products> recentlyViewedProducts = recentlyViewedProducts(user);
+        List<Products> passedProducts = passedProducts(user);
         List<Products> signalProducts = new ArrayList<>();
         signalProducts.addAll(wishlistProducts);
         signalProducts.addAll(cartProducts);
         signalProducts.addAll(recentlyViewedProducts);
 
-        if (signalProducts.isEmpty()) {
+        if (signalProducts.isEmpty() && passedProducts.isEmpty()) {
             return rankForGuest(activeProducts, popularityRanks);
         }
 
         Set<UUID> ownedProductIds = productIds(wishlistProducts);
         ownedProductIds.addAll(productIds(cartProducts));
         Set<UUID> recentlyViewedProductIds = productIds(recentlyViewedProducts);
+        Set<UUID> passedProductIds = productIds(passedProducts);
 
         return activeProducts.stream()
                 .sorted(Comparator
                         .comparingDouble((Products product) -> scoreForUser(
                                 product,
                                 signalProducts,
+                                passedProducts,
                                 ownedProductIds,
                                 recentlyViewedProductIds,
+                                passedProductIds,
                                 popularityRanks))
                         .reversed()
                         .thenComparing(Products::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
@@ -111,8 +118,10 @@ public class ProductRecommendationService {
     private double scoreForUser(
             Products product,
             List<Products> signalProducts,
+            List<Products> passedProducts,
             Set<UUID> ownedProductIds,
             Set<UUID> recentlyViewedProductIds,
+            Set<UUID> passedProductIds,
             Map<UUID, Integer> popularityRanks) {
         double score = scorePopularity(product, popularityRanks);
 
@@ -130,8 +139,22 @@ public class ProductRecommendationService {
             }
         }
 
+        for (Products passedProduct : passedProducts) {
+            if (sameBrand(product, passedProduct)) {
+                score -= PASSED_BRAND_PENALTY;
+            }
+
+            if (sameCategory(product, passedProduct)) {
+                score -= PASSED_CATEGORY_PENALTY;
+            }
+        }
+
         if (recentlyViewedProductIds.contains(product.getProductId())) {
             score -= VIEWED_EXACT_PRODUCT_PENALTY;
+        }
+
+        if (passedProductIds.contains(product.getProductId())) {
+            score -= PASSED_EXACT_PRODUCT_PENALTY;
         }
 
         if (ownedProductIds.contains(product.getProductId())) {
@@ -160,7 +183,27 @@ public class ProductRecommendationService {
             return List.of();
         }
 
-        if (productIds.isEmpty()) {
+        if (productIds == null || productIds.isEmpty()) {
+            return List.of();
+        }
+
+        return productsByIdsPreservingOrder(productIds);
+    }
+
+    private List<Products> passedProducts(Users user) {
+        List<UUID> productIds;
+
+        try {
+            productIds = productAnalyticsService.getPassedProductIds(user.getUserId());
+        } catch (RuntimeException e) {
+            return List.of();
+        }
+
+        return productsByIdsPreservingOrder(productIds);
+    }
+
+    private List<Products> productsByIdsPreservingOrder(List<UUID> productIds) {
+        if (productIds == null || productIds.isEmpty()) {
             return List.of();
         }
 
@@ -180,6 +223,10 @@ public class ProductRecommendationService {
         try {
             productIds = productAnalyticsService.getMostViewedProductIds(POPULAR_PRODUCT_LIMIT);
         } catch (RuntimeException e) {
+            return Map.of();
+        }
+
+        if (productIds == null || productIds.isEmpty()) {
             return Map.of();
         }
 

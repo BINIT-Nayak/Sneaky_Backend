@@ -103,6 +103,7 @@ class WishlistServiceTest {
             assertThat(item.getPrice()).isEqualByComparingTo(BigDecimal.valueOf(12999));
             assertThat(item.getImageUrl()).isEqualTo("image.jpg");
             assertThat(item.getBrandName()).isEqualTo("Nike");
+            assertThat(item.getCategory()).isEqualTo("Running");
         });
     }
 
@@ -210,6 +211,7 @@ class WishlistServiceTest {
         product.setName("Air Max");
         product.setPrice(BigDecimal.valueOf(12999));
         product.setImageUrl("image.jpg");
+        product.setCategory("Running");
         product.setBrand(brand);
         return product;
     }

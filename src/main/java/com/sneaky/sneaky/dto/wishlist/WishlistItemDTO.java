@@ -20,6 +20,7 @@ public class WishlistItemDTO {
     private BigDecimal price;
     private String imageUrl;
     private String brandName;
+    private String category;
     private List<String> sizes;
     private List<ProductColorDTO> colors;
     private String stockStatus;

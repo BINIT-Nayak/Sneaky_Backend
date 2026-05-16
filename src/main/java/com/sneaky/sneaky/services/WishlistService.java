@@ -79,6 +79,7 @@ public class WishlistService {
                             p.getPrice(),
                             p.getImageUrl(),
                             brandName,
+                            p.getCategory(),
                             ProductService.resolveSizes(p.getSizes()),
                             ProductService.toColorDtos(p.getColors()),
                             ProductService.resolveStockStatus(p.getStockStatus()));

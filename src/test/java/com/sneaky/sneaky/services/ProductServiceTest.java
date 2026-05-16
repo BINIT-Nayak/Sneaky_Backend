@@ -24,6 +24,7 @@ import com.sneaky.sneaky.dto.product.CreateProductRequestDTO;
 import com.sneaky.sneaky.dto.product.ProductColorDTO;
 import com.sneaky.sneaky.dto.product.ProductDTO;
 import com.sneaky.sneaky.dto.product.UpdateProductRequestDTO;
+import com.sneaky.sneaky.dto.analytics.UserActivityEventType;
 import com.sneaky.sneaky.entity.Brands;
 import com.sneaky.sneaky.entity.Products;
 import com.sneaky.sneaky.repository.BrandsRepository;
@@ -150,6 +151,20 @@ class ProductServiceTest {
 
         assertThat(product.getIsActive()).isFalse();
         verify(productsRepository).save(product);
+    }
+
+    @Test
+    void recordProductPassPublishesPassEvent() {
+        UUID userId = UUID.randomUUID();
+        UUID productId = UUID.randomUUID();
+        Products product = product(productId, null);
+
+        when(productsRepository.findById(productId)).thenReturn(Optional.of(product));
+
+        productService.recordProductPass(productId, userId);
+
+        verify(activityEventFactory).create(UserActivityEventType.PRODUCT_PASSED, userId, productId, null);
+        verify(activityEventPublisher).publish(any());
     }
 
     private static Products product(UUID id, Brands brand) {

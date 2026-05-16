@@ -139,6 +139,7 @@ public class CartService {
                 currency,
                 product.getImageUrl(),
                 brandName,
+                product.getCategory(),
                 cart.getQuantity(),
                 price.multiply(BigDecimal.valueOf(cart.getQuantity())),
                 ProductService.resolveSizes(product.getSizes()),

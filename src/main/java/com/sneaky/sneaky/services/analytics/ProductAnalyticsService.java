@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class ProductAnalyticsService {
     private static final int RECENTLY_VIEWED_LIMIT = 20;
+    private static final int PASSED_PRODUCTS_LIMIT = 80;
 
     private final StringRedisTemplate redisTemplate;
 
@@ -30,6 +31,12 @@ public class ProductAnalyticsService {
             redisTemplate.opsForValue().increment(productMetricKey(productId, "views"));
             redisTemplate.opsForZSet().incrementScore("analytics:products:most-viewed", productId.toString(), 1);
             recordRecentlyViewed(event);
+            return;
+        }
+
+        if (event.getEventType() == UserActivityEventType.PRODUCT_PASSED) {
+            redisTemplate.opsForValue().increment(productMetricKey(productId, "passes"));
+            recordPassedProduct(event);
             return;
         }
 
@@ -53,6 +60,18 @@ public class ProductAnalyticsService {
 
     public List<UUID> getRecentlyViewedProductIds(UUID userId) {
         List<String> productIds = redisTemplate.opsForList().range(recentlyViewedKey(userId), 0, RECENTLY_VIEWED_LIMIT - 1);
+
+        if (productIds == null) {
+            return List.of();
+        }
+
+        return productIds.stream()
+                .map(UUID::fromString)
+                .toList();
+    }
+
+    public List<UUID> getPassedProductIds(UUID userId) {
+        List<String> productIds = redisTemplate.opsForList().range(passedProductsKey(userId), 0, PASSED_PRODUCTS_LIMIT - 1);
 
         if (productIds == null) {
             return List.of();
@@ -91,6 +110,18 @@ public class ProductAnalyticsService {
         redisTemplate.opsForList().trim(key, 0, RECENTLY_VIEWED_LIMIT - 1);
     }
 
+    private void recordPassedProduct(UserActivityEventDTO event) {
+        if (event.getUserId() == null) {
+            return;
+        }
+
+        String key = passedProductsKey(event.getUserId());
+        String productId = event.getProductId().toString();
+        redisTemplate.opsForList().remove(key, 0, productId);
+        redisTemplate.opsForList().leftPush(key, productId);
+        redisTemplate.opsForList().trim(key, 0, PASSED_PRODUCTS_LIMIT - 1);
+    }
+
     private long readLong(String key) {
         String value = redisTemplate.opsForValue().get(key);
         return value == null ? 0 : Long.parseLong(value);
@@ -102,5 +133,9 @@ public class ProductAnalyticsService {
 
     private static String recentlyViewedKey(UUID userId) {
         return "analytics:user:" + userId + ":recently-viewed";
+    }
+
+    private static String passedProductsKey(UUID userId) {
+        return "analytics:user:" + userId + ":passed-products";
     }
 }

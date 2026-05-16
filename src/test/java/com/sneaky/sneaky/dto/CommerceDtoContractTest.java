@@ -61,6 +61,7 @@ class CommerceDtoContractTest {
                 "INR",
                 "image.jpg",
                 "Nike",
+                "Running",
                 2,
                 BigDecimal.valueOf(25998),
                 List.of("UK 8", "UK 9"),
@@ -76,6 +77,7 @@ class CommerceDtoContractTest {
         assertThat(updateRequest.getQuantity()).isEqualTo(3);
         assertThat(cartItem.getProductId()).isEqualTo(productId);
         assertThat(cartItem.getQuantity()).isEqualTo(2);
+        assertThat(cartItem.getCategory()).isEqualTo("Running");
         assertThat(cartItem.getItemTotal()).isEqualByComparingTo(BigDecimal.valueOf(25998));
     }
 
@@ -89,6 +91,7 @@ class CommerceDtoContractTest {
                 BigDecimal.valueOf(12999),
                 "image.jpg",
                 "Nike",
+                "Running",
                 List.of("UK 8", "UK 9"),
                 List.of(new ProductColorDTO("Black", "#17151d")),
                 "In stock");
@@ -98,6 +101,7 @@ class CommerceDtoContractTest {
         assertThat(request.getProductId()).isEqualTo(productId);
         assertThat(item.getProductId()).isEqualTo(productId);
         assertThat(item.getBrandName()).isEqualTo("Nike");
+        assertThat(item.getCategory()).isEqualTo("Running");
         assertThat(item.getImageUrl()).isEqualTo("image.jpg");
     }
 }
