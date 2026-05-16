@@ -102,6 +102,14 @@ public class WishlistService {
         publishWishlistEvent(UserActivityEventType.WISHLIST_REMOVED, userId, productId);
     }
 
+    @Transactional
+    public void clearWishlist(UUID userId) {
+        Users user = usersRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+
+        wishListRepository.deleteByUser(user);
+    }
+
     private void publishWishlistEvent(UserActivityEventType eventType, UUID userId, UUID productId) {
         activityEventPublisher.publish(activityEventFactory.create(eventType, userId, productId, null));
     }

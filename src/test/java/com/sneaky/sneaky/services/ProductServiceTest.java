@@ -46,6 +46,9 @@ class ProductServiceTest {
     @Mock
     private UserActivityEventFactory activityEventFactory;
 
+    @Mock
+    private ProductRecommendationService productRecommendationService;
+
     @InjectMocks
     private ProductService productService;
 

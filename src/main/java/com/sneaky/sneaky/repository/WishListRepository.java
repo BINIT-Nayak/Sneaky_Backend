@@ -19,6 +19,8 @@ public interface WishListRepository extends JpaRepository<WishList, Long> {
 
     Optional<WishList> findByUserAndProduct(Users user, Products product);
 
+    void deleteByUser(Users user);
+
     List<WishList> findByUserOrderByCreatedAtDesc(Users user);
 
     @Query("SELECT w FROM WishList w JOIN FETCH w.product p LEFT JOIN FETCH p.brand WHERE w.user = :user ORDER BY w.createdAt DESC, w.wishlistId DESC")

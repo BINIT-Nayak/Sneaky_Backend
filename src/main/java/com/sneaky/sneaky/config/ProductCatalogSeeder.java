@@ -24,7 +24,9 @@ import lombok.RequiredArgsConstructor;
 public class ProductCatalogSeeder {
 
     private static final String[] BRAND_NAMES = {
-            "Nike", "Adidas", "Puma", "Reebok", "New Balance", "Asics", "Converse", "Vans"
+            "Nike", "Adidas", "Puma", "Reebok", "New Balance", "Asics", "Converse", "Vans",
+            "Under Armour", "Skechers", "Fila", "Saucony", "Brooks", "Hoka", "On", "Mizuno",
+            "Salomon", "Jordan", "Li-Ning", "Anta"
     };
 
     private static final String[] MODEL_NAMES = {
@@ -37,7 +39,20 @@ public class ProductCatalogSeeder {
             "Neo Runner", "Balance Court", "Flex Runner", "Street Runner", "Tonal Low",
             "Motion Max", "Court Prime", "Lite Runner", "Sprint Deck", "Gel Street",
             "Daily Court", "Active Mesh", "Urban Runner", "Cloud Lift", "Skate Low",
-            "Retro High", "Training Plus", "Runner Elite", "Court Soft", "Trail City"
+            "Retro High", "Training Plus", "Runner Elite", "Court Soft", "Trail City",
+            "Tempo Forge", "Marathon Edge", "Hoop Street", "Trail Ridge", "Court Rally",
+            "Boardwalk Slip", "Gym Drive", "Rain Shield", "Pebble Runner", "Carbon Pace",
+            "Studio Flow", "Heritage Suede", "Grip Trek", "Campus Knit", "Flex Court",
+            "Apex Trainer", "Recovery Slide", "City Hiker", "Pro Bounce", "Wave Runner"
+    };
+
+    private static final String[] CATEGORY_NAMES = {
+            "Running", "Lifestyle", "Training", "Skate", "Basketball", "Tennis", "Trail",
+            "Walking", "Football", "Outdoor", "Court", "Slip-On", "Premium", "Recovery"
+    };
+
+    private static final long[] PRICE_BASES = {
+            2499L, 3299L, 4499L, 5499L, 6999L, 8499L, 9999L, 11999L, 14999L, 17999L, 21999L, 26999L
     };
 
     private static final String[] IMAGE_URLS = {
@@ -72,7 +87,7 @@ public class ProductCatalogSeeder {
     private final BrandsRepository brandsRepository;
 
     @Bean
-    ApplicationRunner seedProducts(@Value("${app.seed.products.minimum-count:150}") int minimumCount) {
+    ApplicationRunner seedProducts(@Value("${app.seed.products.minimum-count:300}") int minimumCount) {
         return args -> seedCatalog(minimumCount);
     }
 
@@ -91,10 +106,10 @@ public class ProductCatalogSeeder {
             Products product = Products.builder()
                     .brand(brands.get(catalogIndex % brands.size()))
                     .name(productName(catalogIndex))
-                    .description("A versatile sneaker with everyday cushioning, durable materials, and a clean streetwear profile.")
-                    .price(BigDecimal.valueOf(5499L + ((catalogIndex % 18) * 500L)))
+                    .description(productDescription(catalogIndex))
+                    .price(productPrice(catalogIndex))
                     .currency("INR")
-                    .category(catalogIndex % 4 == 0 ? "Running" : catalogIndex % 4 == 1 ? "Lifestyle" : catalogIndex % 4 == 2 ? "Training" : "Skate")
+                    .category(CATEGORY_NAMES[catalogIndex % CATEGORY_NAMES.length])
                     .imageUrl(IMAGE_URLS[catalogIndex % IMAGE_URLS.length])
                     .sizes(SIZE_SETS.get(catalogIndex % SIZE_SETS.size()))
                     .colors(copyColors(COLOR_SETS.get(catalogIndex % COLOR_SETS.size())))
@@ -124,5 +139,21 @@ public class ProductCatalogSeeder {
         int dropNumber = (catalogIndex / MODEL_NAMES.length) + 1;
 
         return dropNumber == 1 ? baseName : baseName + " Drop " + dropNumber;
+    }
+
+    private static BigDecimal productPrice(int catalogIndex) {
+        long basePrice = PRICE_BASES[catalogIndex % PRICE_BASES.length];
+        long brandPremium = (catalogIndex % BRAND_NAMES.length) * 180L;
+        long categoryPremium = (catalogIndex % CATEGORY_NAMES.length) * 120L;
+        long dropPremium = (catalogIndex / MODEL_NAMES.length) * 650L;
+
+        return BigDecimal.valueOf(basePrice + brandPremium + categoryPremium + dropPremium);
+    }
+
+    private static String productDescription(int catalogIndex) {
+        String category = CATEGORY_NAMES[catalogIndex % CATEGORY_NAMES.length].toLowerCase();
+
+        return "A " + category
+                + " sneaker tuned for comfort, grip, and everyday rotation with materials chosen for its price tier.";
     }
 }

@@ -39,6 +39,13 @@ class WishListRepositoryTest {
     }
 
     @Test
+    void deleteByUserHasExpectedSpringDataContract() throws Exception {
+        Method method = WishListRepository.class.getMethod("deleteByUser", Users.class);
+
+        assertThat(method.getReturnType()).isEqualTo(void.class);
+    }
+
+    @Test
     void findByUserOrderByCreatedAtDescHasExpectedSpringDataContract() throws Exception {
         Method method = WishListRepository.class.getMethod("findByUserOrderByCreatedAtDesc", Users.class);
 

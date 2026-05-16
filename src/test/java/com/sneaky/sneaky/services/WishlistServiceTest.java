@@ -136,6 +136,17 @@ class WishlistServiceTest {
     }
 
     @Test
+    void clearWishlistDeletesAllItemsForUser() {
+        Users user = user(UUID.randomUUID());
+
+        when(usersRepository.findById(user.getUserId())).thenReturn(Optional.of(user));
+
+        wishlistService.clearWishlist(user.getUserId());
+
+        verify(wishListRepository).deleteByUser(user);
+    }
+
+    @Test
     void removeFromWishlistRejectsMissingWishlistItem() {
         Users user = user(UUID.randomUUID());
         Products product = product(UUID.randomUUID(), brand("Nike"));

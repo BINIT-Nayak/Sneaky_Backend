@@ -98,6 +98,18 @@ class WishlistControllerTest {
     }
 
     @Test
+    void clearWishlistDelegatesToServiceForCurrentUser() throws Exception {
+        UUID userId = UUID.randomUUID();
+
+        when(currentUser.getUserId()).thenReturn(userId);
+
+        mockMvc.perform(delete("/api/wishlist"))
+                .andExpect(status().isNoContent());
+
+        verify(wishlistService).clearWishlist(userId);
+    }
+
+    @Test
     void addToWishlistRejectsInvalidProductIdPayload() throws Exception {
         mockMvc.perform(post("/api/wishlist")
                         .contentType("application/json")

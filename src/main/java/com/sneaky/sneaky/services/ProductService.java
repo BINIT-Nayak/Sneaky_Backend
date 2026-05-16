@@ -34,10 +34,19 @@ public class ProductService {
     private final BrandsRepository brandsRepository;
     private final ActivityEventPublisher activityEventPublisher;
     private final UserActivityEventFactory activityEventFactory;
+    private final ProductRecommendationService productRecommendationService;
 
     @Transactional(readOnly = true)
     public List<ProductDTO> getActiveProducts() {
         return productsRepository.findByIsActiveTrueOrderByCreatedAtDesc()
+                .stream()
+                .map(this::toDTO)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProductDTO> getRecommendedProducts(UUID userId) {
+        return productRecommendationService.getRecommendedProducts(userId)
                 .stream()
                 .map(this::toDTO)
                 .toList();

@@ -63,6 +63,22 @@ public class ProductAnalyticsService {
                 .toList();
     }
 
+    public List<UUID> getMostViewedProductIds(int limit) {
+        if (limit <= 0) {
+            return List.of();
+        }
+
+        var productIds = redisTemplate.opsForZSet().reverseRange("analytics:products:most-viewed", 0, limit - 1);
+
+        if (productIds == null) {
+            return List.of();
+        }
+
+        return productIds.stream()
+                .map(UUID::fromString)
+                .toList();
+    }
+
     private void recordRecentlyViewed(UserActivityEventDTO event) {
         if (event.getUserId() == null) {
             return;

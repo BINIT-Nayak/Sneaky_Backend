@@ -15,6 +15,9 @@ The backend handles:
 - Secure JWT-based access management
 - Database operations with JPA & PostgreSQL
 - Redis caching support
+- Product recommendations for the home feed
+- Product analytics and recently viewed products
+- Cart and wishlist management
 - Validation & security layers
 - Modular API architecture
 
@@ -27,6 +30,11 @@ The backend handles:
 - 🛡️ Spring Security integration
 - 🗄️ PostgreSQL database support
 - 🚀 Redis caching integration
+- 🧠 Rule-based product recommendation model
+- 🧪 Product catalog seeding for recommendation testing
+- ❤️ Wishlist APIs, including clear-all support
+- 🛒 Cart APIs
+- 📈 Product analytics counters and recently viewed products
 - 📦 Clean layered architecture
 - ✅ Request validation
 - 🔄 Scalable service structure
@@ -135,9 +143,60 @@ The application uses:
 Redis is integrated for:
 
 - Caching
-- Session storage
-- Performance optimization
+- Product analytics counters
+- Most-viewed product ranking
 - Recently viewed products and product analytics counters
+
+## 🧠 Product Recommendations
+
+The home feed can request recommended products through:
+
+```http
+GET /api/products/recommended
+```
+
+The recommendation service ranks active products using:
+
+- Wishlist history
+- Cart history
+- Recently viewed products
+- Brand similarity
+- Category similarity
+- Similar price range
+- Global popularity from Redis most-viewed analytics
+
+If the user is logged out or has no history, the endpoint falls back to popularity and newest products.
+
+The regular product endpoint is still available:
+
+```http
+GET /api/products
+```
+
+## 🧪 Product Catalog Seeding
+
+`ProductCatalogSeeder` creates a larger product pool for local development and recommendation testing.
+
+By default, it seeds up to `300` active products across multiple brands, categories, colors, sizes, and price bands.
+
+Configure the minimum active product count with:
+
+```bash
+APP_SEED_PRODUCTS_MINIMUM_COUNT=300
+```
+
+Disable product seeding with:
+
+```bash
+APP_SEED_PRODUCTS_ENABLED=false
+```
+
+Current seed data includes:
+
+- 20 brands
+- 14 product categories
+- Budget, mid-range, and premium price bands
+- Multiple size and color sets
 
 ## 📈 Kafka Product Analytics
 
@@ -157,7 +216,22 @@ Available analytics endpoints:
 - `GET /api/product-analytics/recently-viewed`
 
 Product views are tracked when an authenticated request calls `GET /api/products/{id}`.
-- 🛡️ Security Features
+
+## ❤️ Wishlist API
+
+Wishlist endpoints require authentication:
+
+```http
+GET /api/wishlist
+POST /api/wishlist
+DELETE /api/wishlist/{productId}
+DELETE /api/wishlist
+```
+
+`DELETE /api/wishlist` clears every wishlist item for the current user.
+
+## 🛡️ Security Features
+
 - JWT Token Authentication
 - Password encryption
 - Spring Security filters

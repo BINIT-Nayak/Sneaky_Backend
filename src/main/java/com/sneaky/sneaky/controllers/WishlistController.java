@@ -45,4 +45,10 @@ public class WishlistController {
     public void removeFromWishlist(@PathVariable UUID productId) {
         wishlistService.removeFromWishlist(currentUser.getUserId(), productId);
     }
+
+    @DeleteMapping
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void clearWishlist() {
+        wishlistService.clearWishlist(currentUser.getUserId());
+    }
 }

@@ -33,6 +33,11 @@ public class ProductController {
         return productService.getActiveProducts();
     }
 
+    @GetMapping("/recommended")
+    public List<ProductDTO> getRecommendedProducts(Authentication authentication) {
+        return productService.getRecommendedProducts(authenticatedUserId(authentication));
+    }
+
     @GetMapping("/{id}")
     public ProductDTO getProduct(@PathVariable UUID id, Authentication authentication) {
         return productService.getProductById(id, authenticatedUserId(authentication));

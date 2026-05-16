@@ -18,6 +18,8 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
@@ -50,6 +52,7 @@ class ProductControllerTest {
 
         when(productService.getActiveProducts()).thenReturn(List.of(product));
         when(productService.getProductById(productId, null)).thenReturn(product);
+        when(productService.getRecommendedProducts(null)).thenReturn(List.of(product));
 
         mockMvc.perform(get("/api/products"))
                 .andExpect(status().isOk())
@@ -59,6 +62,27 @@ class ProductControllerTest {
         mockMvc.perform(get("/api/products/{id}", productId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Air Max"));
+
+        mockMvc.perform(get("/api/products/recommended"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name").value("Air Max"));
+    }
+
+    @Test
+    void recommendedProductsPassAuthenticatedUserToService() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UUID productId = UUID.randomUUID();
+        ProductDTO product = productDto(productId, "Air Max");
+
+        when(productService.getRecommendedProducts(userId)).thenReturn(List.of(product));
+
+        mockMvc.perform(get("/api/products/recommended")
+                        .principal(new UsernamePasswordAuthenticationToken(
+                                userId.toString(),
+                                null,
+                                List.of(new SimpleGrantedAuthority("ROLE_USER")))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(productId.toString()));
     }
 
     @Test
