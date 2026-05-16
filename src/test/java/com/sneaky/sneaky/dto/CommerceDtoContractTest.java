@@ -37,6 +37,8 @@ class CommerceDtoContractTest {
                 "Comfortable",
                 "Nike",
                 "Sneakers",
+                "Amazon",
+                "https://www.amazon.in/s?k=sneakers",
                 List.of("UK 8", "UK 9"),
                 List.of(new ProductColorDTO("Black", "#17151d")),
                 "Only a few left");
@@ -44,6 +46,8 @@ class CommerceDtoContractTest {
         assertThat(product.getId()).isEqualTo(productId);
         assertThat(product.getImage()).isEqualTo("image.jpg");
         assertThat(product.getBrand()).isEqualTo("Nike");
+        assertThat(product.getMerchantName()).isEqualTo("Amazon");
+        assertThat(product.getMerchantUrl()).isEqualTo("https://www.amazon.in/s?k=sneakers");
         assertThat(product.getSizes()).containsExactly("UK 8", "UK 9");
         assertThat(product.getColors()).singleElement().extracting("value").isEqualTo("#17151d");
         assertThat(product.getStockStatus()).isEqualTo("Only a few left");
@@ -62,6 +66,8 @@ class CommerceDtoContractTest {
                 "image.jpg",
                 "Nike",
                 "Running",
+                "Amazon",
+                "https://www.amazon.in/s?k=sneakers",
                 2,
                 BigDecimal.valueOf(25998),
                 List.of("UK 8", "UK 9"),
@@ -78,6 +84,8 @@ class CommerceDtoContractTest {
         assertThat(cartItem.getProductId()).isEqualTo(productId);
         assertThat(cartItem.getQuantity()).isEqualTo(2);
         assertThat(cartItem.getCategory()).isEqualTo("Running");
+        assertThat(cartItem.getMerchantName()).isEqualTo("Amazon");
+        assertThat(cartItem.getMerchantUrl()).isEqualTo("https://www.amazon.in/s?k=sneakers");
         assertThat(cartItem.getItemTotal()).isEqualByComparingTo(BigDecimal.valueOf(25998));
     }
 

@@ -31,15 +31,21 @@ import lombok.RequiredArgsConstructor;
 public class ProductRecommendationService {
     private static final double BRAND_MATCH_SCORE = 8.0;
     private static final double CATEGORY_MATCH_SCORE = 5.0;
+    private static final double MERCHANT_MATCH_SCORE = 4.0;
     private static final double PRICE_MATCH_SCORE = 3.0;
     private static final double POPULARITY_SCORE = 2.0;
     private static final double PASSED_BRAND_PENALTY = 6.0;
     private static final double PASSED_CATEGORY_PENALTY = 10.0;
+    private static final double PASSED_MERCHANT_PENALTY = 5.0;
     private static final double VIEWED_EXACT_PRODUCT_PENALTY = 12.0;
     private static final double PASSED_EXACT_PRODUCT_PENALTY = 35.0;
     private static final double OWNED_EXACT_PRODUCT_PENALTY = 50.0;
+    private static final double CATEGORY_REPEAT_WINDOW_PENALTY = 7.0;
+    private static final double BRAND_REPEAT_WINDOW_PENALTY = 3.0;
+    private static final double MERCHANT_REPEAT_WINDOW_PENALTY = 2.0;
     private static final BigDecimal PRICE_RANGE_RATIO = BigDecimal.valueOf(0.25);
     private static final int POPULAR_PRODUCT_LIMIT = 100;
+    private static final int DIVERSITY_WINDOW_SIZE = 4;
 
     private final ProductsRepository productsRepository;
     private final UsersRepository usersRepository;
@@ -91,28 +97,85 @@ public class ProductRecommendationService {
         Set<UUID> recentlyViewedProductIds = productIds(recentlyViewedProducts);
         Set<UUID> passedProductIds = productIds(passedProducts);
 
-        return activeProducts.stream()
-                .sorted(Comparator
-                        .comparingDouble((Products product) -> scoreForUser(
+        List<ScoredProduct> scoredProducts = activeProducts.stream()
+                .map(product -> new ScoredProduct(
+                        product,
+                        scoreForUser(
                                 product,
                                 signalProducts,
                                 passedProducts,
                                 ownedProductIds,
                                 recentlyViewedProductIds,
                                 passedProductIds,
-                                popularityRanks))
+                                popularityRanks)))
+                .sorted(Comparator
+                        .comparingDouble(ScoredProduct::score)
                         .reversed()
-                        .thenComparing(Products::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                        .thenComparing(
+                                scoredProduct -> scoredProduct.product().getCreatedAt(),
+                                Comparator.nullsLast(Comparator.reverseOrder())))
                 .toList();
+
+        return diversify(scoredProducts);
     }
 
     private List<Products> rankForGuest(List<Products> activeProducts, Map<UUID, Integer> popularityRanks) {
-        return activeProducts.stream()
+        List<ScoredProduct> scoredProducts = activeProducts.stream()
+                .map(product -> new ScoredProduct(product, scorePopularity(product, popularityRanks)))
                 .sorted(Comparator
-                        .comparingDouble((Products product) -> scorePopularity(product, popularityRanks))
+                        .comparingDouble(ScoredProduct::score)
                         .reversed()
-                        .thenComparing(Products::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                        .thenComparing(
+                                scoredProduct -> scoredProduct.product().getCreatedAt(),
+                                Comparator.nullsLast(Comparator.reverseOrder())))
                 .toList();
+
+        return diversify(scoredProducts);
+    }
+
+    private List<Products> diversify(List<ScoredProduct> scoredProducts) {
+        List<ScoredProduct> remainingProducts = new ArrayList<>(scoredProducts);
+        List<Products> rankedProducts = new ArrayList<>();
+
+        while (!remainingProducts.isEmpty()) {
+            int bestIndex = 0;
+            double bestAdjustedScore = Double.NEGATIVE_INFINITY;
+
+            for (int index = 0; index < remainingProducts.size(); index += 1) {
+                ScoredProduct scoredProduct = remainingProducts.get(index);
+                double adjustedScore = scoredProduct.score() - diversityPenalty(scoredProduct.product(), rankedProducts);
+
+                if (adjustedScore > bestAdjustedScore) {
+                    bestAdjustedScore = adjustedScore;
+                    bestIndex = index;
+                }
+            }
+
+            rankedProducts.add(remainingProducts.remove(bestIndex).product());
+        }
+
+        return rankedProducts;
+    }
+
+    private double diversityPenalty(Products product, List<Products> rankedProducts) {
+        int fromIndex = Math.max(0, rankedProducts.size() - DIVERSITY_WINDOW_SIZE);
+        double penalty = 0.0;
+
+        for (Products recentProduct : rankedProducts.subList(fromIndex, rankedProducts.size())) {
+            if (sameCategory(product, recentProduct)) {
+                penalty += CATEGORY_REPEAT_WINDOW_PENALTY;
+            }
+
+            if (sameBrand(product, recentProduct)) {
+                penalty += BRAND_REPEAT_WINDOW_PENALTY;
+            }
+
+            if (sameMerchant(product, recentProduct)) {
+                penalty += MERCHANT_REPEAT_WINDOW_PENALTY;
+            }
+        }
+
+        return penalty;
     }
 
     private double scoreForUser(
@@ -137,6 +200,10 @@ public class ProductRecommendationService {
             if (similarPrice(product, signalProduct)) {
                 score += PRICE_MATCH_SCORE;
             }
+
+            if (sameMerchant(product, signalProduct)) {
+                score += MERCHANT_MATCH_SCORE;
+            }
         }
 
         for (Products passedProduct : passedProducts) {
@@ -146,6 +213,10 @@ public class ProductRecommendationService {
 
             if (sameCategory(product, passedProduct)) {
                 score -= PASSED_CATEGORY_PENALTY;
+            }
+
+            if (sameMerchant(product, passedProduct)) {
+                score -= PASSED_MERCHANT_PENALTY;
             }
         }
 
@@ -268,6 +339,16 @@ public class ProductRecommendationService {
                 && category.equalsIgnoreCase(signalCategory);
     }
 
+    private static boolean sameMerchant(Products product, Products signalProduct) {
+        String merchantName = product.getMerchantName();
+        String signalMerchantName = signalProduct.getMerchantName();
+
+        return merchantName != null
+                && signalMerchantName != null
+                && !merchantName.isBlank()
+                && merchantName.equalsIgnoreCase(signalMerchantName);
+    }
+
     private static boolean similarPrice(Products product, Products signalProduct) {
         BigDecimal price = product.getPrice();
         BigDecimal signalPrice = signalProduct.getPrice();
@@ -280,5 +361,8 @@ public class ProductRecommendationService {
         BigDecimal allowedDifference = signalPrice.multiply(PRICE_RANGE_RATIO);
 
         return difference.compareTo(allowedDifference) <= 0;
+    }
+
+    private record ScoredProduct(Products product, double score) {
     }
 }

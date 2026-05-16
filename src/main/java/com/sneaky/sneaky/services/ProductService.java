@@ -29,6 +29,8 @@ public class ProductService {
             new ProductColorDTO("Ivory", "#eee4cf"),
             new ProductColorDTO("Clay", "#c27a58"));
     private static final String DEFAULT_STOCK_STATUS = "In stock";
+    private static final String DEFAULT_MERCHANT_NAME = "Sneaky Partner";
+    private static final String DEFAULT_MERCHANT_URL = "https://www.google.com/";
 
     private final ProductsRepository productsRepository;
     private final BrandsRepository brandsRepository;
@@ -98,6 +100,8 @@ public class ProductService {
         product.setPrice(request.getPrice());
         product.setImageUrl(request.getImageUrl());
         product.setCategory(request.getCategory());
+        product.setMerchantName(resolveMerchantName(request.getMerchantName()));
+        product.setMerchantUrl(resolveMerchantUrl(request.getMerchantUrl()));
         product.setSizes(resolveSizes(request.getSizes()));
         product.setColors(toProductColors(request.getColors()));
         product.setStockStatus(resolveStockStatus(request.getStockStatus()));
@@ -125,6 +129,8 @@ public class ProductService {
         product.setPrice(request.getPrice());
         product.setImageUrl(request.getImageUrl());
         product.setCategory(request.getCategory());
+        product.setMerchantName(resolveMerchantName(request.getMerchantName()));
+        product.setMerchantUrl(resolveMerchantUrl(request.getMerchantUrl()));
         product.setSizes(resolveSizes(request.getSizes()));
         product.setColors(toProductColors(request.getColors()));
         product.setStockStatus(resolveStockStatus(request.getStockStatus()));
@@ -154,6 +160,10 @@ public class ProductService {
             product.setImageUrl(request.getImageUrl());
         if (request.getCategory() != null)
             product.setCategory(request.getCategory());
+        if (request.getMerchantName() != null)
+            product.setMerchantName(resolveMerchantName(request.getMerchantName()));
+        if (request.getMerchantUrl() != null)
+            product.setMerchantUrl(resolveMerchantUrl(request.getMerchantUrl()));
         if (request.getSizes() != null)
             product.setSizes(resolveSizes(request.getSizes()));
         if (request.getColors() != null)
@@ -196,6 +206,8 @@ public class ProductService {
                 product.getDescription(),
                 brand == null ? "" : brand.getName(),
                 product.getCategory(),
+                resolveMerchantName(product.getMerchantName()),
+                resolveMerchantUrl(product.getMerchantUrl()),
                 resolveSizes(product.getSizes()),
                 resolveColors(toColorDtos(product.getColors())),
                 resolveStockStatus(product.getStockStatus()));
@@ -211,6 +223,14 @@ public class ProductService {
 
     public static String resolveStockStatus(String stockStatus) {
         return stockStatus == null || stockStatus.isBlank() ? DEFAULT_STOCK_STATUS : stockStatus;
+    }
+
+    public static String resolveMerchantName(String merchantName) {
+        return merchantName == null || merchantName.isBlank() ? DEFAULT_MERCHANT_NAME : merchantName;
+    }
+
+    public static String resolveMerchantUrl(String merchantUrl) {
+        return merchantUrl == null || merchantUrl.isBlank() ? DEFAULT_MERCHANT_URL : merchantUrl;
     }
 
     public static List<ProductColor> toProductColors(List<ProductColorDTO> colors) {

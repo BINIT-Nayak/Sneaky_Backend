@@ -65,6 +65,8 @@ class ProductServiceTest {
             assertThat(dto.getName()).isEqualTo("Air Max");
             assertThat(dto.getBrand()).isEqualTo("Nike");
             assertThat(dto.getImage()).isEqualTo("image.jpg");
+            assertThat(dto.getMerchantName()).isEqualTo("Amazon");
+            assertThat(dto.getMerchantUrl()).isEqualTo("https://www.amazon.in/s?k=sneakers");
             assertThat(dto.getSizes()).containsExactly("UK 6", "UK 7", "UK 8", "UK 9", "UK 10");
             assertThat(dto.getColors()).extracting("name").containsExactly("Black", "Ivory", "Clay");
             assertThat(dto.getStockStatus()).isEqualTo("In stock");
@@ -81,6 +83,8 @@ class ProductServiceTest {
         request.setPrice(BigDecimal.valueOf(12999));
         request.setImageUrl("image.jpg");
         request.setCategory("Sneakers");
+        request.setMerchantName("Myntra");
+        request.setMerchantUrl("https://www.myntra.com/sneakers");
         request.setBrandId(brandId);
         request.setSizes(List.of("UK 8", "UK 9"));
         request.setColors(List.of(new ProductColorDTO("Green", "#127a52")));
@@ -104,6 +108,8 @@ class ProductServiceTest {
             assertThat(color.getValue()).isEqualTo("#127a52");
         });
         assertThat(captor.getValue().getStockStatus()).isEqualTo("Selling fast");
+        assertThat(captor.getValue().getMerchantName()).isEqualTo("Myntra");
+        assertThat(captor.getValue().getMerchantUrl()).isEqualTo("https://www.myntra.com/sneakers");
         assertThat(captor.getValue().getIsActive()).isTrue();
         assertThat(created.getBrand()).isEqualTo("Nike");
     }
@@ -175,6 +181,8 @@ class ProductServiceTest {
         product.setPrice(BigDecimal.valueOf(12999));
         product.setImageUrl("image.jpg");
         product.setCategory("Sneakers");
+        product.setMerchantName("Amazon");
+        product.setMerchantUrl("https://www.amazon.in/s?k=sneakers");
         product.setIsActive(true);
         product.setBrand(brand);
         return product;

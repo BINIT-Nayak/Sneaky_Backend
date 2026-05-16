@@ -163,8 +163,10 @@ The recommendation service ranks active products using:
 - Products and categories the user passed
 - Brand similarity
 - Category similarity
+- Merchant affinity and merchant pass penalties
 - Similar price range
 - Global popularity from Redis most-viewed analytics
+- Diversity reranking to avoid repeating the same category, brand, or merchant in a tight loop
 
 If the user is logged out or has no history, the endpoint falls back to popularity and newest products.
 
@@ -196,8 +198,16 @@ Current seed data includes:
 
 - 20 brands
 - 14 product categories
+- Dummy merchant partners with links like `https://partners.sneaky.test/amazon`
 - Budget, mid-range, and premium price bands
 - Multiple size and color sets
+
+Products also support merchant metadata:
+
+- `merchantName`
+- `merchantUrl`
+
+If a product has no merchant URL, the backend falls back to `https://www.google.com/`.
 
 ## 📈 Kafka Product Analytics
 
@@ -224,7 +234,17 @@ Home feed passes are tracked with:
 POST /api/product-analytics/products/{productId}/pass
 ```
 
-Passed products are stored per user in Redis and used by the recommendation model to reduce similar categories and brands.
+Passed products are stored per user in Redis and used by the recommendation model to reduce similar categories, brands, and merchants.
+
+## 🛒 Merchant Checkout
+
+Sneaky does not process payments. Cart items include product merchant fields, and the frontend groups cart items by merchant so one outbound button appears per partner:
+
+- Amazon items share one Amazon button
+- Myntra items share one Myntra button
+- AJIO, Nike, Puma, Adidas, and other partners follow the same pattern
+
+The merchant buttons open the product partner site in a new tab.
 
 ## ❤️ Wishlist API
 

@@ -140,6 +140,8 @@ public class CartService {
                 product.getImageUrl(),
                 brandName,
                 product.getCategory(),
+                ProductService.resolveMerchantName(product.getMerchantName()),
+                ProductService.resolveMerchantUrl(product.getMerchantUrl()),
                 cart.getQuantity(),
                 price.multiply(BigDecimal.valueOf(cart.getQuantity())),
                 ProductService.resolveSizes(product.getSizes()),

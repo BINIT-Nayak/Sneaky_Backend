@@ -21,6 +21,8 @@ public class CartItemDTO {
     private String imageUrl;
     private String brandName;
     private String category;
+    private String merchantName;
+    private String merchantUrl;
     private Integer quantity;
     private BigDecimal itemTotal;
     private List<String> sizes;

@@ -51,6 +51,17 @@ public class ProductCatalogSeeder {
             "Walking", "Football", "Outdoor", "Court", "Slip-On", "Premium", "Recovery"
     };
 
+    private record Merchant(String name, String url) {
+    }
+
+    private static final List<Merchant> MERCHANTS = List.of(
+            new Merchant("Amazon", "https://partners.sneaky.test/amazon"),
+            new Merchant("Myntra", "https://partners.sneaky.test/myntra"),
+            new Merchant("AJIO", "https://partners.sneaky.test/ajio"),
+            new Merchant("Nike", "https://partners.sneaky.test/nike"),
+            new Merchant("Puma", "https://partners.sneaky.test/puma"),
+            new Merchant("Adidas", "https://partners.sneaky.test/adidas"));
+
     private static final long[] PRICE_BASES = {
             2499L, 3299L, 4499L, 5499L, 6999L, 8499L, 9999L, 11999L, 14999L, 17999L, 21999L, 26999L
     };
@@ -93,6 +104,8 @@ public class ProductCatalogSeeder {
 
     @Transactional
     void seedCatalog(int minimumCount) {
+        backfillMissingMerchantData();
+
         long activeProducts = productsRepository.countByIsActiveTrue();
         if (activeProducts >= minimumCount) {
             return;
@@ -110,6 +123,8 @@ public class ProductCatalogSeeder {
                     .price(productPrice(catalogIndex))
                     .currency("INR")
                     .category(CATEGORY_NAMES[catalogIndex % CATEGORY_NAMES.length])
+                    .merchantName(merchant(catalogIndex).name())
+                    .merchantUrl(merchant(catalogIndex).url())
                     .imageUrl(IMAGE_URLS[catalogIndex % IMAGE_URLS.length])
                     .sizes(SIZE_SETS.get(catalogIndex % SIZE_SETS.size()))
                     .colors(copyColors(COLOR_SETS.get(catalogIndex % COLOR_SETS.size())))
@@ -117,6 +132,26 @@ public class ProductCatalogSeeder {
                     .isActive(true)
                     .build();
 
+            productsRepository.save(product);
+        }
+    }
+
+    private void backfillMissingMerchantData() {
+        List<Products> products = productsRepository.findByIsActiveTrueOrderByCreatedAtDesc();
+
+        for (int index = 0; index < products.size(); index += 1) {
+            Products product = products.get(index);
+
+            if (product.getMerchantName() != null
+                    && !product.getMerchantName().isBlank()
+                    && product.getMerchantUrl() != null
+                    && !product.getMerchantUrl().isBlank()) {
+                continue;
+            }
+
+            Merchant merchant = merchant(index);
+            product.setMerchantName(merchant.name());
+            product.setMerchantUrl(merchant.url());
             productsRepository.save(product);
         }
     }
@@ -155,5 +190,9 @@ public class ProductCatalogSeeder {
 
         return "A " + category
                 + " sneaker tuned for comfort, grip, and everyday rotation with materials chosen for its price tier.";
+    }
+
+    private static Merchant merchant(int catalogIndex) {
+        return MERCHANTS.get(catalogIndex % MERCHANTS.size());
     }
 }

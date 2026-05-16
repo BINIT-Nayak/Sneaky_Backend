@@ -55,6 +55,12 @@ public class Products {
 
     private String category;
 
+    @Column(name = "merchant_name")
+    private String merchantName;
+
+    @Column(name = "merchant_url", length = 1000)
+    private String merchantUrl;
+
     @Column(name = "image_url")
     private String imageUrl;
 

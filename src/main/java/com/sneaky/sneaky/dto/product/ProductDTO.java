@@ -17,6 +17,8 @@ public class ProductDTO {
     private String description;
     private String brand;
     private String category;
+    private String merchantName;
+    private String merchantUrl;
     private List<String> sizes;
     private List<ProductColorDTO> colors;
     private String stockStatus;

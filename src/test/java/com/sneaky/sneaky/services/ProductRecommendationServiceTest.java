@@ -106,6 +106,49 @@ class ProductRecommendationServiceTest {
                 .containsExactly("Lifestyle Pair", "Another Runner", "Passed Runner");
     }
 
+    @Test
+    void userRecommendationsUseMerchantAffinity() {
+        Users user = user();
+        Products wishlistProduct = product("Saved Amazon Pair", "Nike", "Running", BigDecimal.valueOf(10000), 3);
+        Products merchantMatch = product("Amazon Match", "Asics", "Lifestyle", BigDecimal.valueOf(19000), 2);
+        Products neutralPair = product("Neutral Pair", "Vans", "Skate", BigDecimal.valueOf(19000), 1);
+        WishList wishlist = WishList.builder()
+                .user(user)
+                .product(wishlistProduct)
+                .build();
+
+        wishlistProduct.setMerchantName("Amazon");
+        merchantMatch.setMerchantName("Amazon");
+        neutralPair.setMerchantName("Myntra");
+
+        when(productsRepository.findByIsActiveTrueOrderByCreatedAtDesc())
+                .thenReturn(List.of(neutralPair, merchantMatch, wishlistProduct));
+        when(usersRepository.findById(user.getUserId())).thenReturn(Optional.of(user));
+        when(wishListRepository.findByUserWithProductAndBrand(user)).thenReturn(List.of(wishlist));
+        when(cartRepository.findByUserWithProductAndBrand(user)).thenReturn(List.of());
+        when(productAnalyticsService.getRecentlyViewedProductIds(user.getUserId())).thenReturn(List.of());
+        when(productAnalyticsService.getPassedProductIds(user.getUserId())).thenReturn(List.of());
+
+        assertThat(recommendationService.getRecommendedProducts(user.getUserId()))
+                .extracting(Products::getName)
+                .containsExactly("Amazon Match", "Neutral Pair", "Saved Amazon Pair");
+    }
+
+    @Test
+    void recommendationsDiversifyRepeatedCategoriesWhenScoresAreClose() {
+        Products runningOne = product("Running One", "Nike", "Running", BigDecimal.valueOf(10000), 1);
+        Products runningTwo = product("Running Two", "Adidas", "Running", BigDecimal.valueOf(10000), 2);
+        Products trainingPair = product("Training Pair", "Puma", "Training", BigDecimal.valueOf(10000), 3);
+        Products skatePair = product("Skate Pair", "Vans", "Skate", BigDecimal.valueOf(10000), 4);
+
+        when(productsRepository.findByIsActiveTrueOrderByCreatedAtDesc())
+                .thenReturn(List.of(runningOne, runningTwo, trainingPair, skatePair));
+
+        assertThat(recommendationService.getRecommendedProducts(null))
+                .extracting(Products::getName)
+                .containsExactly("Running One", "Training Pair", "Skate Pair", "Running Two");
+    }
+
     private static Users user() {
         Users user = new Users();
         user.setUserId(UUID.randomUUID());
@@ -124,6 +167,7 @@ class ProductRecommendationServiceTest {
         product.setPrice(price);
         product.setImageUrl(name + ".jpg");
         product.setDescription(name);
+        product.setMerchantName("Amazon");
         product.setIsActive(true);
         product.setCreatedAt(LocalDateTime.now().minusDays(ageInDays));
         return product;

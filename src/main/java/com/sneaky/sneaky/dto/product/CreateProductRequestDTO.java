@@ -32,6 +32,12 @@ public class CreateProductRequestDTO {
     @Size(max = 80, message = "Category must be at most 80 characters")
     private String category;
 
+    @Size(max = 80, message = "Merchant name must be at most 80 characters")
+    private String merchantName;
+
+    @Size(max = 1000, message = "Merchant URL must be at most 1000 characters")
+    private String merchantUrl;
+
     private List<@NotBlank(message = "Size cannot be blank") @Size(max = 20, message = "Size must be at most 20 characters") String> sizes;
 
     @Valid

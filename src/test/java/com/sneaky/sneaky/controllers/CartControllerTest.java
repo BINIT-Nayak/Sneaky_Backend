@@ -160,6 +160,8 @@ class CartControllerTest {
                 "image.jpg",
                 "Nike",
                 "Running",
+                "Amazon",
+                "https://www.amazon.in/s?k=sneakers",
                 quantity,
                 price.multiply(BigDecimal.valueOf(quantity)),
                 List.of("UK 8", "UK 9"),

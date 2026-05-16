@@ -129,6 +129,8 @@ class CartServiceTest {
             assertThat(item.getImageUrl()).isEqualTo("image.jpg");
             assertThat(item.getBrandName()).isEqualTo("Nike");
             assertThat(item.getCategory()).isEqualTo("Running");
+            assertThat(item.getMerchantName()).isEqualTo("Amazon");
+            assertThat(item.getMerchantUrl()).isEqualTo("https://www.amazon.in/s?k=sneakers");
             assertThat(item.getQuantity()).isEqualTo(2);
             assertThat(item.getItemTotal()).isEqualByComparingTo(BigDecimal.valueOf(25998));
         });
@@ -243,6 +245,8 @@ class CartServiceTest {
         product.setCurrency("INR");
         product.setImageUrl("image.jpg");
         product.setCategory("Running");
+        product.setMerchantName("Amazon");
+        product.setMerchantUrl("https://www.amazon.in/s?k=sneakers");
         product.setBrand(brand);
         return product;
     }
