@@ -1,5 +1,6 @@
 package com.sneaky.sneaky.services;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -47,6 +48,7 @@ public class ProductService {
         product.setImageUrl(request.getImageUrl());
         product.setCategory(request.getCategory());
         product.setIsActive(request.getIsActive() != null ? request.getIsActive() : true);
+        product.setUpdatedAt(LocalDateTime.now());
 
         // brand mapping
         if (request.getBrandId() != null) {
@@ -71,12 +73,13 @@ public class ProductService {
         product.setImageUrl(request.getImageUrl());
         product.setCategory(request.getCategory());
         product.setIsActive(request.getIsActive());
-
         if (request.getBrandId() != null) {
             Brands brand = brandsRepository.findById(request.getBrandId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Brand not found"));
             product.setBrand(brand);
         }
+
+        product.setUpdatedAt(LocalDateTime.now());
 
         return toDTO(productsRepository.save(product));
     }
@@ -105,6 +108,8 @@ public class ProductService {
             product.setBrand(brand);
         }
 
+        product.setUpdatedAt(LocalDateTime.now());
+
         return toDTO(productsRepository.save(product));
     }
 
@@ -112,6 +117,7 @@ public class ProductService {
     public void deleteProduct(UUID id) {
         Products product = getProductEntity(id);
         product.setIsActive(false); // soft delete
+        product.setUpdatedAt(LocalDateTime.now());
         productsRepository.save(product);
     }
 

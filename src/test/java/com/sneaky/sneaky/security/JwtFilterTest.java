@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Date;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.AfterEach;
@@ -17,6 +18,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import com.sneaky.sneaky.entity.Users;
 import com.sneaky.sneaky.repository.UsersRepository;
 
 import io.jsonwebtoken.JwtException;
@@ -44,7 +46,7 @@ class JwtFilterTest {
         FilterChain filterChain = mock(FilterChain.class);
 
         when(jwtUtil.extractUserId("access-token")).thenReturn(USER_ID);
-        when(usersRepository.existsById(USER_ID)).thenReturn(true);
+        when(usersRepository.findById(USER_ID)).thenReturn(Optional.of(user("USER", false)));
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         when(valueOperations.get("auth:logout:" + USER_ID)).thenReturn(null);
 
@@ -62,7 +64,7 @@ class JwtFilterTest {
         FilterChain filterChain = mock(FilterChain.class);
 
         when(jwtUtil.extractUserId("access-token")).thenReturn(USER_ID);
-        when(usersRepository.existsById(USER_ID)).thenReturn(true);
+        when(usersRepository.findById(USER_ID)).thenReturn(Optional.of(user("USER", false)));
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         when(valueOperations.get("auth:logout:" + USER_ID)).thenReturn("2000");
         when(jwtUtil.extractIssuedAt("access-token")).thenReturn(new Date(1000));
@@ -81,7 +83,7 @@ class JwtFilterTest {
         FilterChain filterChain = mock(FilterChain.class);
 
         when(jwtUtil.extractUserId("access-token")).thenReturn(USER_ID);
-        when(usersRepository.existsById(USER_ID)).thenReturn(false);
+        when(usersRepository.findById(USER_ID)).thenReturn(Optional.empty());
 
         jwtFilter.doFilter(request, response, filterChain);
 
@@ -103,5 +105,13 @@ class JwtFilterTest {
         assertThat(response.getStatus()).isEqualTo(401);
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
         verify(filterChain, never()).doFilter(request, response);
+    }
+
+    private Users user(String role, boolean banned) {
+        Users user = new Users();
+        user.setUserId(USER_ID);
+        user.setRole(role);
+        user.setIsBanned(banned);
+        return user;
     }
 }

@@ -83,6 +83,7 @@ public class UserService {
         if (request.getPassword() != null) {
             user.setPassword(passwordEncoder.encode(request.getPassword()));
         }
+        user.setUpdatedAt(java.time.LocalDateTime.now());
 
         return toDTO(userRepository.save(user));
     }
@@ -106,6 +107,7 @@ public class UserService {
         if (request.getPassword() != null) {
             user.setPassword(passwordEncoder.encode(request.getPassword()));
         }
+        user.setUpdatedAt(java.time.LocalDateTime.now());
 
         return toDTO(userRepository.save(user));
     }

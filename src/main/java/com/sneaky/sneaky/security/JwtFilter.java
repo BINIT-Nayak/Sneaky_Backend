@@ -1,19 +1,21 @@
 package com.sneaky.sneaky.security;
 
 import java.io.IOException;
-import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.sneaky.sneaky.repository.UsersRepository;
+import com.sneaky.sneaky.entity.Users;
 
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -47,13 +49,17 @@ public class JwtFilter extends OncePerRequestFilter {
 
             try {
                 UUID userId = jwtUtil.extractUserId(token);
+                Users user = usersRepository.findById(userId).orElse(null);
 
                 if (userId != null
-                        && usersRepository.existsById(userId)
+                        && user != null
+                        && !Boolean.TRUE.equals(user.getIsBanned())
                         && !isLoggedOutToken(userId, token)
                         && SecurityContextHolder.getContext().getAuthentication() == null) {
+                    List<SimpleGrantedAuthority> authorities = List.of(
+                            new SimpleGrantedAuthority("ROLE_" + normalizeRole(user.getRole())));
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userId.toString(),
-                            null, Collections.emptyList());
+                            null, authorities);
 
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -71,5 +77,13 @@ public class JwtFilter extends OncePerRequestFilter {
     private boolean isLoggedOutToken(UUID userId, String token) {
         String logoutTimestamp = redisTemplate.opsForValue().get("auth:logout:" + userId);
         return logoutTimestamp != null && jwtUtil.extractIssuedAt(token).getTime() <= Long.parseLong(logoutTimestamp);
+    }
+
+    private String normalizeRole(String role) {
+        if (role == null || role.isBlank()) {
+            return "USER";
+        }
+
+        return role.trim().toUpperCase();
     }
 }

@@ -39,4 +39,29 @@ public class Users {
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
+    
+
+    // fields for admin
+    @Column(name = "role", columnDefinition = "VARCHAR(20) DEFAULT 'USER'")
+    private String role = "USER";
+    
+    @Column(name = "is_banned")
+    private Boolean isBanned = false;
+    
+    @Column(name = "last_login")
+    private LocalDateTime lastLogin;
+    
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+     public boolean isAdmin() {
+        return "ADMIN".equalsIgnoreCase(this.role);
+    }
+     public boolean isModerator() {
+        return "MODERATOR".equalsIgnoreCase(this.role);
+    }
+      public boolean hasAdminAccess() {
+        return isAdmin() || isModerator();
+    }
+
 }
