@@ -15,5 +15,4 @@ public class SneakyApplication implements CommandLineRunner {
 	public void run(String... args) throws Exception {
 		System.out.println("Sneaky Application Started!");
 	}
-
 }

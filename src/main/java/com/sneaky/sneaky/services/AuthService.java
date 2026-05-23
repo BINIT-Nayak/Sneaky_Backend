@@ -1,6 +1,7 @@
 package com.sneaky.sneaky.services;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.Locale;
 
@@ -37,11 +38,22 @@ public class AuthService {
         if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
         }
+        
+        // Check if user is banned
+        if (user.getIsBanned() != null && user.getIsBanned()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Your account has been banned. Please contact support.");
+        }
+        
+        // Update last login
+        user.setLastLogin(LocalDateTime.now());
+        user.setUpdatedAt(LocalDateTime.now());
+        userRepository.save(user);
 
-        String accessToken = jwtUtil.generateAccessToken(user.getUserId());
+        // Generate token with role
+        String accessToken = generateAccessToken(user.getUserId(), user.getRole());
         String refreshToken = jwtUtil.generateRefreshToken(user.getUserId());
 
-        return new LoginResponseDTO(accessToken, refreshToken);
+        return new LoginResponseDTO(accessToken, refreshToken, user.getUserId(), user.getName(), user.getEmail(), user.getRole());
     }
 
     public RefreshResponseDTO refresh(RefreshRequestDTO refreshRequest) {
@@ -60,10 +72,10 @@ public class AuthService {
                 throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token");
             }
 
-            userRepository.findById(userId)
+            Users user = userRepository.findById(userId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
 
-            String newAccessToken = jwtUtil.generateAccessToken(userId);
+            String newAccessToken = generateAccessToken(userId, user.getRole());
             return new RefreshResponseDTO(newAccessToken);
 
         } catch (Exception e) {
@@ -104,9 +116,17 @@ public class AuthService {
 
         Users user = userService.createUser(request);
 
-        String accessToken = jwtUtil.generateAccessToken(user.getUserId());
+        String accessToken = generateAccessToken(user.getUserId(), user.getRole());
         String refreshToken = jwtUtil.generateRefreshToken(user.getUserId());
 
-        return new LoginResponseDTO(accessToken, refreshToken);
+        return new LoginResponseDTO(accessToken, refreshToken, user.getUserId(), user.getName(), user.getEmail(), user.getRole());
+    }
+
+    private String generateAccessToken(java.util.UUID userId, String role) {
+        if (role == null || "USER".equalsIgnoreCase(role)) {
+            return jwtUtil.generateAccessToken(userId);
+        }
+
+        return jwtUtil.generateAccessToken(userId, role);
     }
 }

@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import com.sneaky.sneaky.dto.brand.*;
@@ -21,6 +22,7 @@ public class BrandController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('ADMIN')")
     public BrandDTO createBrand(@Valid @RequestBody CreateBrandRequestDTO request) {
         return brandService.createBrand(request);
     }
@@ -36,6 +38,7 @@ public class BrandController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public BrandDTO updateBrand(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateBrandRequestDTO request) {
@@ -44,6 +47,7 @@ public class BrandController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasRole('ADMIN')")
     public void deleteBrand(@PathVariable UUID id) {
         brandService.deleteBrand(id);
     }

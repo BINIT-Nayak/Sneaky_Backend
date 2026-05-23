@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -38,11 +39,13 @@ public class ProductController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('ADMIN')")
     public ProductDTO createProduct(@RequestBody CreateProductRequestDTO request) {
         return productService.createProduct(request);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ProductDTO updateProduct(
             @PathVariable UUID id,
             @RequestBody UpdateProductRequestDTO request) {
@@ -50,6 +53,7 @@ public class ProductController {
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ProductDTO patchProduct(
             @PathVariable UUID id,
             @RequestBody UpdateProductRequestDTO request) {
@@ -58,6 +62,7 @@ public class ProductController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasRole('ADMIN')")
     public void deleteProduct(@PathVariable UUID id) {
         productService.deleteProduct(id);
     }
