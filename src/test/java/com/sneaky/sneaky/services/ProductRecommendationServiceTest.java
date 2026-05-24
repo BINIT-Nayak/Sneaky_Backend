@@ -5,6 +5,7 @@ import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -54,7 +55,38 @@ class ProductRecommendationServiceTest {
         when(productsRepository.findByIsActiveTrueOrderByCreatedAtDesc()).thenReturn(List.of(newest, mostViewed));
         when(productAnalyticsService.getMostViewedProductIds(100)).thenReturn(List.of(mostViewed.getProductId()));
 
-        assertThat(recommendationService.getRecommendedProducts(null))
+        ProductRecommendationService.RecommendationResult result = recommendationService.getRecommendedProducts(null);
+
+        assertThat(result.personalized()).isFalse();
+        assertThat(result.products())
+                .extracting(Products::getName)
+                .containsExactly("Popular Pair", "New Arrival");
+    }
+
+    @Test
+    void userRecommendationsStayGenericUntilEnoughPreferenceSignalsExist() {
+        Users user = user();
+        Products newest = product("New Arrival", "Nike", "Runner", BigDecimal.valueOf(12000), 2);
+        Products mostViewed = product("Popular Pair", "Adidas", "Lifestyle", BigDecimal.valueOf(9000), 1);
+        Products wishlistProduct = product("Saved Nike", "Nike", "Runner", BigDecimal.valueOf(10000), 3);
+        WishList wishlist = WishList.builder()
+                .user(user)
+                .product(wishlistProduct)
+                .build();
+
+        when(productsRepository.findByIsActiveTrueOrderByCreatedAtDesc()).thenReturn(List.of(newest, mostViewed));
+        when(productAnalyticsService.getMostViewedProductIds(100)).thenReturn(List.of(mostViewed.getProductId()));
+        when(usersRepository.findById(user.getUserId())).thenReturn(Optional.of(user));
+        when(wishListRepository.findByUserWithProductAndBrand(user)).thenReturn(List.of(wishlist));
+        when(cartRepository.findByUserWithProductAndBrand(user)).thenReturn(List.of());
+        when(productAnalyticsService.getRecentlyViewedProductIds(user.getUserId())).thenReturn(List.of());
+        when(productAnalyticsService.getPassedProductIds(user.getUserId())).thenReturn(List.of());
+
+        ProductRecommendationService.RecommendationResult result =
+                recommendationService.getRecommendedProducts(user.getUserId());
+
+        assertThat(result.personalized()).isFalse();
+        assertThat(result.products())
                 .extracting(Products::getName)
                 .containsExactly("Popular Pair", "New Arrival");
     }
@@ -75,11 +107,16 @@ class ProductRecommendationServiceTest {
         when(productAnalyticsService.getMostViewedProductIds(100))
                 .thenReturn(List.of(popularAdidas.getProductId()));
         when(usersRepository.findById(user.getUserId())).thenReturn(Optional.of(user));
-        when(wishListRepository.findByUserWithProductAndBrand(user)).thenReturn(List.of(wishlist));
+        when(wishListRepository.findByUserWithProductAndBrand(user))
+                .thenReturn(wishlistSignals(user, wishlist, 19));
         when(cartRepository.findByUserWithProductAndBrand(user)).thenReturn(List.of());
         when(productAnalyticsService.getRecentlyViewedProductIds(user.getUserId())).thenReturn(List.of());
 
-        assertThat(recommendationService.getRecommendedProducts(user.getUserId()))
+        ProductRecommendationService.RecommendationResult result =
+                recommendationService.getRecommendedProducts(user.getUserId());
+
+        assertThat(result.personalized()).isTrue();
+        assertThat(result.products())
                 .extracting(Products::getName)
                 .containsExactly("Recommended Nike", "Popular Adidas", "Saved Nike");
     }
@@ -96,12 +133,19 @@ class ProductRecommendationServiceTest {
         when(usersRepository.findById(user.getUserId())).thenReturn(Optional.of(user));
         when(wishListRepository.findByUserWithProductAndBrand(user)).thenReturn(List.of());
         when(cartRepository.findByUserWithProductAndBrand(user)).thenReturn(List.of());
-        when(productAnalyticsService.getPassedProductIds(user.getUserId()))
-                .thenReturn(List.of(passedRunner.getProductId()));
-        when(productsRepository.findAllById(List.of(passedRunner.getProductId())))
-                .thenReturn(List.of(passedRunner));
+        List<Products> passedProducts = passedSignals(passedRunner, 19);
+        List<UUID> passedProductIds = passedProducts.stream()
+                .map(Products::getProductId)
+                .toList();
+        when(productAnalyticsService.getPassedProductIds(user.getUserId())).thenReturn(passedProductIds);
+        when(productsRepository.findByProductIdIn(passedProductIds))
+                .thenReturn(passedProducts);
 
-        assertThat(recommendationService.getRecommendedProducts(user.getUserId()))
+        ProductRecommendationService.RecommendationResult result =
+                recommendationService.getRecommendedProducts(user.getUserId());
+
+        assertThat(result.personalized()).isTrue();
+        assertThat(result.products())
                 .extracting(Products::getName)
                 .containsExactly("Lifestyle Pair", "Another Runner", "Passed Runner");
     }
@@ -124,12 +168,17 @@ class ProductRecommendationServiceTest {
         when(productsRepository.findByIsActiveTrueOrderByCreatedAtDesc())
                 .thenReturn(List.of(neutralPair, merchantMatch, wishlistProduct));
         when(usersRepository.findById(user.getUserId())).thenReturn(Optional.of(user));
-        when(wishListRepository.findByUserWithProductAndBrand(user)).thenReturn(List.of(wishlist));
+        when(wishListRepository.findByUserWithProductAndBrand(user))
+                .thenReturn(wishlistSignals(user, wishlist, 19));
         when(cartRepository.findByUserWithProductAndBrand(user)).thenReturn(List.of());
         when(productAnalyticsService.getRecentlyViewedProductIds(user.getUserId())).thenReturn(List.of());
         when(productAnalyticsService.getPassedProductIds(user.getUserId())).thenReturn(List.of());
 
-        assertThat(recommendationService.getRecommendedProducts(user.getUserId()))
+        ProductRecommendationService.RecommendationResult result =
+                recommendationService.getRecommendedProducts(user.getUserId());
+
+        assertThat(result.personalized()).isTrue();
+        assertThat(result.products())
                 .extracting(Products::getName)
                 .containsExactly("Amazon Match", "Neutral Pair", "Saved Amazon Pair");
     }
@@ -144,7 +193,10 @@ class ProductRecommendationServiceTest {
         when(productsRepository.findByIsActiveTrueOrderByCreatedAtDesc())
                 .thenReturn(List.of(runningOne, runningTwo, trainingPair, skatePair));
 
-        assertThat(recommendationService.getRecommendedProducts(null))
+        ProductRecommendationService.RecommendationResult result = recommendationService.getRecommendedProducts(null);
+
+        assertThat(result.personalized()).isFalse();
+        assertThat(result.products())
                 .extracting(Products::getName)
                 .containsExactly("Running One", "Training Pair", "Skate Pair", "Running Two");
     }
@@ -156,6 +208,45 @@ class ProductRecommendationServiceTest {
         user.setPassword("password");
         user.setRole("USER");
         return user;
+    }
+
+    private static List<WishList> wishlistSignals(Users user, WishList primaryWishlist, int extraCount) {
+        List<WishList> wishlists = new ArrayList<>();
+        wishlists.add(primaryWishlist);
+
+        for (int index = 0; index < extraCount; index += 1) {
+            Products neutralProduct = product(
+                    "Neutral Wishlist " + index,
+                    "Brand " + index,
+                    "Category " + index,
+                    BigDecimal.valueOf(1000 + index),
+                    10 + index);
+            neutralProduct.setMerchantName("Merchant " + index);
+            wishlists.add(WishList.builder()
+                    .user(user)
+                    .product(neutralProduct)
+                    .build());
+        }
+
+        return wishlists;
+    }
+
+    private static List<Products> passedSignals(Products primaryProduct, int extraCount) {
+        List<Products> products = new ArrayList<>();
+        products.add(primaryProduct);
+
+        for (int index = 0; index < extraCount; index += 1) {
+            Products neutralProduct = product(
+                    "Neutral Passed " + index,
+                    "Passed Brand " + index,
+                    "Passed Category " + index,
+                    BigDecimal.valueOf(1000 + index),
+                    10 + index);
+            neutralProduct.setMerchantName("Passed Merchant " + index);
+            products.add(neutralProduct);
+        }
+
+        return products;
     }
 
     private static Products product(String name, String brandName, String category, BigDecimal price, int ageInDays) {

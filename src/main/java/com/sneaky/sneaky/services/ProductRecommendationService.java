@@ -46,6 +46,9 @@ public class ProductRecommendationService {
     private static final BigDecimal PRICE_RANGE_RATIO = BigDecimal.valueOf(0.25);
     private static final int POPULAR_PRODUCT_LIMIT = 100;
     private static final int DIVERSITY_WINDOW_SIZE = 4;
+    private static final int RECOMMENDATION_CANDIDATE_LIMIT = 250;
+    private static final int RECOMMENDATION_RESULT_LIMIT = 60;
+    private static final int MIN_PERSONALIZATION_SIGNALS = 20;
 
     private final ProductsRepository productsRepository;
     private final UsersRepository usersRepository;
@@ -54,25 +57,25 @@ public class ProductRecommendationService {
     private final ProductAnalyticsService productAnalyticsService;
 
     @Transactional(readOnly = true)
-    public List<Products> getRecommendedProducts(UUID userId) {
+    public RecommendationResult getRecommendedProducts(UUID userId) {
         List<Products> activeProducts = productsRepository.findByIsActiveTrueOrderByCreatedAtDesc();
 
         if (activeProducts.isEmpty()) {
-            return List.of();
+            return new RecommendationResult(List.of(), false);
         }
 
         Map<UUID, Integer> popularityRanks = popularityRanks();
 
         if (userId == null) {
-            return rankForGuest(activeProducts, popularityRanks);
+            return new RecommendationResult(rankForGuest(activeProducts, popularityRanks), false);
         }
 
         return usersRepository.findById(userId)
                 .map(user -> rankForUser(user, activeProducts, popularityRanks))
-                .orElseGet(() -> rankForGuest(activeProducts, popularityRanks));
+                .orElseGet(() -> new RecommendationResult(rankForGuest(activeProducts, popularityRanks), false));
     }
 
-    private List<Products> rankForUser(Users user, List<Products> activeProducts, Map<UUID, Integer> popularityRanks) {
+    private RecommendationResult rankForUser(Users user, List<Products> activeProducts, Map<UUID, Integer> popularityRanks) {
         List<Products> wishlistProducts = wishListRepository.findByUserWithProductAndBrand(user)
                 .stream()
                 .map(WishList::getProduct)
@@ -88,8 +91,12 @@ public class ProductRecommendationService {
         signalProducts.addAll(cartProducts);
         signalProducts.addAll(recentlyViewedProducts);
 
-        if (signalProducts.isEmpty() && passedProducts.isEmpty()) {
-            return rankForGuest(activeProducts, popularityRanks);
+        Set<UUID> preferenceSignalIds = productIds(wishlistProducts);
+        preferenceSignalIds.addAll(productIds(cartProducts));
+        preferenceSignalIds.addAll(productIds(passedProducts));
+
+        if (preferenceSignalIds.size() < MIN_PERSONALIZATION_SIGNALS) {
+            return new RecommendationResult(rankForGuest(activeProducts, popularityRanks), false);
         }
 
         Set<UUID> ownedProductIds = productIds(wishlistProducts);
@@ -114,9 +121,10 @@ public class ProductRecommendationService {
                         .thenComparing(
                                 scoredProduct -> scoredProduct.product().getCreatedAt(),
                                 Comparator.nullsLast(Comparator.reverseOrder())))
+                .limit(RECOMMENDATION_CANDIDATE_LIMIT)
                 .toList();
 
-        return diversify(scoredProducts);
+        return new RecommendationResult(limitResults(diversify(scoredProducts)), true);
     }
 
     private List<Products> rankForGuest(List<Products> activeProducts, Map<UUID, Integer> popularityRanks) {
@@ -128,9 +136,18 @@ public class ProductRecommendationService {
                         .thenComparing(
                                 scoredProduct -> scoredProduct.product().getCreatedAt(),
                                 Comparator.nullsLast(Comparator.reverseOrder())))
+                .limit(RECOMMENDATION_CANDIDATE_LIMIT)
                 .toList();
 
-        return diversify(scoredProducts);
+        return limitResults(diversify(scoredProducts));
+    }
+
+    private List<Products> limitResults(List<Products> rankedProducts) {
+        if (rankedProducts.size() <= RECOMMENDATION_RESULT_LIMIT) {
+            return rankedProducts;
+        }
+
+        return rankedProducts.subList(0, RECOMMENDATION_RESULT_LIMIT);
     }
 
     private List<Products> diversify(List<ScoredProduct> scoredProducts) {
@@ -278,7 +295,7 @@ public class ProductRecommendationService {
             return List.of();
         }
 
-        Map<UUID, Products> productsById = productsRepository.findAllById(productIds)
+        Map<UUID, Products> productsById = productsRepository.findByProductIdIn(productIds)
                 .stream()
                 .collect(LinkedHashMap::new, (map, product) -> map.put(product.getProductId(), product), Map::putAll);
 
@@ -364,5 +381,8 @@ public class ProductRecommendationService {
     }
 
     private record ScoredProduct(Products product, double score) {
+    }
+
+    public record RecommendationResult(List<Products> products, boolean personalized) {
     }
 }

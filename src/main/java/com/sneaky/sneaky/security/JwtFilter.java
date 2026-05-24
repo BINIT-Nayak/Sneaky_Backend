@@ -23,8 +23,10 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 
 @Component
+@Slf4j
 public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
@@ -80,7 +82,12 @@ public class JwtFilter extends OncePerRequestFilter {
     }
 
     private boolean isLoggedOutToken(UUID userId, String token) {
-        String logoutTimestamp = redisTemplate.opsForValue().get("auth:logout:" + userId);
-        return logoutTimestamp != null && jwtUtil.extractIssuedAt(token).getTime() <= Long.parseLong(logoutTimestamp);
+        try {
+            String logoutTimestamp = redisTemplate.opsForValue().get("auth:logout:" + userId);
+            return logoutTimestamp != null && jwtUtil.extractIssuedAt(token).getTime() <= Long.parseLong(logoutTimestamp);
+        } catch (RuntimeException ex) {
+            log.warn("Logout token check skipped because Redis is unavailable", ex);
+            return false;
+        }
     }
 }

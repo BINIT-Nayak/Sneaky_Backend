@@ -42,15 +42,18 @@ public class ProductService {
     public List<ProductDTO> getActiveProducts() {
         return productsRepository.findByIsActiveTrueOrderByCreatedAtDesc()
                 .stream()
-                .map(this::toDTO)
+                .map(product -> toDTO(product, false))
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<ProductDTO> getRecommendedProducts(UUID userId) {
-        return productRecommendationService.getRecommendedProducts(userId)
+        ProductRecommendationService.RecommendationResult recommendationResult =
+                productRecommendationService.getRecommendedProducts(userId);
+
+        return recommendationResult.products()
                 .stream()
-                .map(this::toDTO)
+                .map(product -> toDTO(product, recommendationResult.personalized()))
                 .toList();
     }
 
@@ -196,6 +199,10 @@ public class ProductService {
     }
 
     private ProductDTO toDTO(Products product) {
+        return toDTO(product, false);
+    }
+
+    private ProductDTO toDTO(Products product, boolean recommended) {
         Brands brand = product.getBrand();
 
         return new ProductDTO(
@@ -210,7 +217,8 @@ public class ProductService {
                 resolveMerchantUrl(product.getMerchantUrl()),
                 resolveSizes(product.getSizes()),
                 resolveColors(toColorDtos(product.getColors())),
-                resolveStockStatus(product.getStockStatus()));
+                resolveStockStatus(product.getStockStatus()),
+                recommended);
     }
 
     public static List<String> resolveSizes(List<String> sizes) {

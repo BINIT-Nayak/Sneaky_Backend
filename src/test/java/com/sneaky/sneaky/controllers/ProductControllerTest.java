@@ -152,6 +152,7 @@ class ProductControllerTest {
                 "https://www.nike.com/in/w/shoes-y7ok",
                 List.of("UK 8", "UK 9"),
                 List.of(new com.sneaky.sneaky.dto.product.ProductColorDTO("Black", "#17151d")),
-                "Selling fast");
+                "Selling fast",
+                false);
     }
 }

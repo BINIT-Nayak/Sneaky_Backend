@@ -22,4 +22,5 @@ public class ProductDTO {
     private List<String> sizes;
     private List<ProductColorDTO> colors;
     private String stockStatus;
+    private boolean recommended;
 }

@@ -41,7 +41,8 @@ class CommerceDtoContractTest {
                 "https://www.amazon.in/s?k=sneakers",
                 List.of("UK 8", "UK 9"),
                 List.of(new ProductColorDTO("Black", "#17151d")),
-                "Only a few left");
+                "Only a few left",
+                false);
 
         assertThat(product.getId()).isEqualTo(productId);
         assertThat(product.getImage()).isEqualTo("image.jpg");
