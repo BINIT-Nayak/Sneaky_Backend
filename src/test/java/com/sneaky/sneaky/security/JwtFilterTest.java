@@ -57,6 +57,26 @@ class JwtFilterTest {
     }
 
     @Test
+    void normalizesPersistedSpringRolePrefix() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer access-token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        FilterChain filterChain = mock(FilterChain.class);
+
+        when(jwtUtil.extractUserId("access-token")).thenReturn(USER_ID);
+        when(usersRepository.findById(USER_ID)).thenReturn(Optional.of(user("ROLE_ADMIN", false)));
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get("auth:logout:" + USER_ID)).thenReturn(null);
+
+        jwtFilter.doFilter(request, response, filterChain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication().getAuthorities())
+                .extracting("authority")
+                .containsExactly("ROLE_ADMIN");
+        verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
     void skipsAuthenticationWhenTokenWasIssuedBeforeLogout() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Authorization", "Bearer access-token");

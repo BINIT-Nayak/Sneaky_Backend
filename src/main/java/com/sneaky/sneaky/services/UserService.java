@@ -29,7 +29,8 @@ public class UserService {
                 user.getUserId(),
                 user.getName(),
                 user.getEmail(),
-                user.getIsGuest());
+                user.getIsGuest(),
+                user.getRole());
     }
 
     public List<UserDTO> getAllUsers() {

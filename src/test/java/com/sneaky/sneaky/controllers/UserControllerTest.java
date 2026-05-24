@@ -53,14 +53,15 @@ class UserControllerTest {
         void getUsersReturnsUsers() throws Exception {
                 UUID userId = UUID.randomUUID();
                 when(userService.getAllUsers())
-                                .thenReturn(List.of(new UserDTO(userId, "Ari", "ari@example.com", false)));
+                                .thenReturn(List.of(new UserDTO(userId, "Ari", "ari@example.com", false, "ADMIN")));
 
                 mockMvc.perform(get("/api/users"))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$[0].userId").value(userId.toString()))
                                 .andExpect(jsonPath("$[0].name").value("Ari"))
                                 .andExpect(jsonPath("$[0].email").value("ari@example.com"))
-                                .andExpect(jsonPath("$[0].isGuest").value(false));
+                                .andExpect(jsonPath("$[0].isGuest").value(false))
+                                .andExpect(jsonPath("$[0].role").value("ADMIN"));
         }
 
         @Test
@@ -105,7 +106,7 @@ class UserControllerTest {
                 UUID userId = UUID.randomUUID();
                 when(currentUser.getUserId()).thenReturn(userId);
                 when(userService.getUserById(userId))
-                                .thenReturn(new UserDTO(userId, "Ari", "ari@example.com", false));
+                                .thenReturn(new UserDTO(userId, "Ari", "ari@example.com", false, "ADMIN"));
 
                 mockMvc.perform(get("/api/users/me"))
                                 .andExpect(status().isOk())
@@ -120,9 +121,9 @@ class UserControllerTest {
 
                 when(currentUser.getUserId()).thenReturn(userId);
                 when(userService.updateUserById(eq(userId), any(UpdateUserRequestDTO.class)))
-                                .thenReturn(new UserDTO(userId, "Ari Updated", "ari@example.com", false));
+                                .thenReturn(new UserDTO(userId, "Ari Updated", "ari@example.com", false, "USER"));
                 when(userService.patchUserById(eq(userId), any(UpdateUserRequestDTO.class)))
-                                .thenReturn(new UserDTO(userId, "Ari Updated", "ari@example.com", false));
+                                .thenReturn(new UserDTO(userId, "Ari Updated", "ari@example.com", false, "USER"));
 
                 mockMvc.perform(put("/api/users/me")
                                 .contentType("application/json")
