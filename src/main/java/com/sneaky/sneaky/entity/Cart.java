@@ -45,6 +45,7 @@ public class Cart {
     @JoinColumn(name = "product_id", nullable = false)
     private Products product;
 
+    @Builder.Default
     private Integer quantity = 1;
 
     private BigDecimal price;
