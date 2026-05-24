@@ -50,6 +50,7 @@ class UserServiceTest {
         user.setName("Ari");
         user.setEmail("ari@example.com");
         user.setIsGuest(false);
+        user.setRole("ADMIN");
 
         when(userRepository.findAll()).thenReturn(List.of(user));
 
@@ -60,6 +61,7 @@ class UserServiceTest {
             assertThat(dto.getName()).isEqualTo("Ari");
             assertThat(dto.getEmail()).isEqualTo("ari@example.com");
             assertThat(dto.getIsGuest()).isFalse();
+            assertThat(dto.getRole()).isEqualTo("ADMIN");
         });
     }
 

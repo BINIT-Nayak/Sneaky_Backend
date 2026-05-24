@@ -84,6 +84,11 @@ public class JwtFilter extends OncePerRequestFilter {
             return "USER";
         }
 
-        return role.trim().toUpperCase();
+        String normalizedRole = role.trim().toUpperCase();
+        if (normalizedRole.startsWith("ROLE_")) {
+            return normalizedRole.substring("ROLE_".length());
+        }
+
+        return normalizedRole;
     }
 }
