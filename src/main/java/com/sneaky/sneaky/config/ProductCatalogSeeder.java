@@ -104,6 +104,7 @@ public class ProductCatalogSeeder {
 
     @Transactional
     void seedCatalog(int minimumCount) {
+        backfillMissingPublicationState();
         backfillMissingMerchantData();
 
         long activeProducts = productsRepository.countByIsActiveTrue();
@@ -152,6 +153,20 @@ public class ProductCatalogSeeder {
             Merchant merchant = merchant(index);
             product.setMerchantName(merchant.name());
             product.setMerchantUrl(merchant.url());
+            productsRepository.save(product);
+        }
+    }
+
+    private void backfillMissingPublicationState() {
+        List<Products> products = productsRepository.findByIsActiveTrueOrderByCreatedAtDesc();
+
+        for (Products product : products) {
+            String status = product.getStatus();
+            if (status != null && !status.isBlank()) {
+                continue;
+            }
+
+            product.setStatus("APPROVED");
             productsRepository.save(product);
         }
     }

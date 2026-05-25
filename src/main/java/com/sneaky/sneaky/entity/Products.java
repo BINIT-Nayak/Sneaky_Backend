@@ -82,6 +82,7 @@ public class Products {
     @Builder.Default
     private Boolean isActive = true;
 
+    @Builder.Default
     private String status = "APPROVED";
 
     @Column(name = "approved_by")

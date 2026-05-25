@@ -20,6 +20,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sneaky.sneaky.dto.cart.CartItemDTO;
 import com.sneaky.sneaky.dto.wishlist.AddToWishlistRequestDTO;
 import com.sneaky.sneaky.dto.wishlist.WishlistItemDTO;
 import com.sneaky.sneaky.security.CurrentUser;
@@ -97,6 +98,38 @@ class WishlistControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(wishlistService).removeFromWishlist(userId, productId);
+    }
+
+    @Test
+    void moveToCartDelegatesToServiceForCurrentUser() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UUID productId = UUID.randomUUID();
+        CartItemDTO item = new CartItemDTO(
+                productId,
+                "Air Max",
+                BigDecimal.valueOf(12999),
+                "INR",
+                "image.jpg",
+                "Nike",
+                "Running",
+                "Nike",
+                "https://partners.sneaky.test/nike",
+                1,
+                BigDecimal.valueOf(12999),
+                List.of("UK 8", "UK 9"),
+                List.of(new com.sneaky.sneaky.dto.product.ProductColorDTO("Black", "#17151d")),
+                "In stock");
+
+        when(currentUser.getUserId()).thenReturn(userId);
+        when(wishlistService.moveToCart(userId, productId)).thenReturn(item);
+
+        mockMvc.perform(post("/api/wishlist/{productId}/move-to-cart", productId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.productId").value(productId.toString()))
+                .andExpect(jsonPath("$.quantity").value(1))
+                .andExpect(jsonPath("$.itemTotal").value(12999));
+
+        verify(wishlistService).moveToCart(userId, productId);
     }
 
     @Test

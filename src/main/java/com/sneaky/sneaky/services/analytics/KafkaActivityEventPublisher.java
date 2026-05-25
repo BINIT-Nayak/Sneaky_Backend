@@ -3,10 +3,12 @@ package com.sneaky.sneaky.services.analytics;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 
 import com.sneaky.sneaky.dto.analytics.UserActivityEventDTO;
 
+import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
@@ -15,12 +17,19 @@ import lombok.extern.slf4j.Slf4j;
 public class KafkaActivityEventPublisher implements ActivityEventPublisher {
     private final KafkaTemplate<String, UserActivityEventDTO> kafkaTemplate;
     private final String userActivityTopic;
+    private final ThreadPoolTaskExecutor publisherExecutor;
 
     public KafkaActivityEventPublisher(
             KafkaTemplate<String, UserActivityEventDTO> kafkaTemplate,
             @Value("${app.kafka.topics.user-activity}") String userActivityTopic) {
         this.kafkaTemplate = kafkaTemplate;
         this.userActivityTopic = userActivityTopic;
+        this.publisherExecutor = createPublisherExecutor();
+    }
+
+    @PreDestroy
+    void shutdown() {
+        publisherExecutor.shutdown();
     }
 
     @Override
@@ -30,6 +39,10 @@ public class KafkaActivityEventPublisher implements ActivityEventPublisher {
             return;
         }
 
+        publisherExecutor.execute(() -> publishAsync(event));
+    }
+
+    private void publishAsync(UserActivityEventDTO event) {
         try {
             kafkaTemplate.send(userActivityTopic, event.getProductId().toString(), event)
                     .exceptionally(ex -> {
@@ -39,5 +52,15 @@ public class KafkaActivityEventPublisher implements ActivityEventPublisher {
         } catch (Exception ex) {
             log.warn("Failed to queue user activity event {} for Kafka publishing", event.getEventId(), ex);
         }
+    }
+
+    private static ThreadPoolTaskExecutor createPublisherExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setThreadNamePrefix("activity-publisher-");
+        executor.setCorePoolSize(1);
+        executor.setMaxPoolSize(2);
+        executor.setQueueCapacity(100);
+        executor.initialize();
+        return executor;
     }
 }

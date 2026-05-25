@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.sneaky.sneaky.dto.cart.CartItemDTO;
 import com.sneaky.sneaky.dto.wishlist.AddToWishlistRequestDTO;
 import com.sneaky.sneaky.dto.wishlist.WishlistItemDTO;
 import com.sneaky.sneaky.security.CurrentUser;
@@ -44,6 +45,11 @@ public class WishlistController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void removeFromWishlist(@PathVariable UUID productId) {
         wishlistService.removeFromWishlist(currentUser.getUserId(), productId);
+    }
+
+    @PostMapping("/{productId}/move-to-cart")
+    public CartItemDTO moveToCart(@PathVariable UUID productId) {
+        return wishlistService.moveToCart(currentUser.getUserId(), productId);
     }
 
     @DeleteMapping

@@ -2,6 +2,7 @@ package com.sneaky.sneaky.repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -21,4 +22,7 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
 
     @Query("SELECT c FROM Cart c JOIN FETCH c.product p LEFT JOIN FETCH p.brand WHERE c.user = :user ORDER BY c.createdAt DESC, c.cartId DESC")
     List<Cart> findByUserWithProductAndBrand(Users user);
+
+    @Query("SELECT c FROM Cart c JOIN FETCH c.user JOIN FETCH c.product p LEFT JOIN FETCH p.brand WHERE c.user.userId = :userId AND p.productId = :productId")
+    Optional<Cart> findByUserIdAndProductIdWithProductAndBrand(UUID userId, UUID productId);
 }
