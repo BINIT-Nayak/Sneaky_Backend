@@ -52,7 +52,7 @@ class ProductRecommendationServiceTest {
         Products newest = product("New Arrival", "Nike", "Runner", BigDecimal.valueOf(12000), 2);
         Products mostViewed = product("Popular Pair", "Adidas", "Lifestyle", BigDecimal.valueOf(9000), 1);
 
-        when(productsRepository.findByIsActiveTrueOrderByCreatedAtDesc()).thenReturn(List.of(newest, mostViewed));
+        when(productsRepository.findByIsActiveTrueAndStatusOrderByCreatedAtDesc("APPROVED")).thenReturn(List.of(newest, mostViewed));
         when(productAnalyticsService.getMostViewedProductIds(100)).thenReturn(List.of(mostViewed.getProductId()));
 
         ProductRecommendationService.RecommendationResult result = recommendationService.getRecommendedProducts(null);
@@ -74,7 +74,7 @@ class ProductRecommendationServiceTest {
                 .product(wishlistProduct)
                 .build();
 
-        when(productsRepository.findByIsActiveTrueOrderByCreatedAtDesc()).thenReturn(List.of(newest, mostViewed));
+        when(productsRepository.findByIsActiveTrueAndStatusOrderByCreatedAtDesc("APPROVED")).thenReturn(List.of(newest, mostViewed));
         when(productAnalyticsService.getMostViewedProductIds(100)).thenReturn(List.of(mostViewed.getProductId()));
         when(usersRepository.findById(user.getUserId())).thenReturn(Optional.of(user));
         when(wishListRepository.findByUserWithProductAndBrand(user)).thenReturn(List.of(wishlist));
@@ -102,7 +102,7 @@ class ProductRecommendationServiceTest {
                 .product(wishlistProduct)
                 .build();
 
-        when(productsRepository.findByIsActiveTrueOrderByCreatedAtDesc())
+        when(productsRepository.findByIsActiveTrueAndStatusOrderByCreatedAtDesc("APPROVED"))
                 .thenReturn(List.of(popularAdidas, recommendedNike, wishlistProduct));
         when(productAnalyticsService.getMostViewedProductIds(100))
                 .thenReturn(List.of(popularAdidas.getProductId()));
@@ -128,7 +128,7 @@ class ProductRecommendationServiceTest {
         Products anotherRunner = product("Another Runner", "Asics", "Running", BigDecimal.valueOf(11000), 2);
         Products lifestylePair = product("Lifestyle Pair", "Vans", "Lifestyle", BigDecimal.valueOf(9000), 1);
 
-        when(productsRepository.findByIsActiveTrueOrderByCreatedAtDesc())
+        when(productsRepository.findByIsActiveTrueAndStatusOrderByCreatedAtDesc("APPROVED"))
                 .thenReturn(List.of(anotherRunner, lifestylePair, passedRunner));
         when(usersRepository.findById(user.getUserId())).thenReturn(Optional.of(user));
         when(wishListRepository.findByUserWithProductAndBrand(user)).thenReturn(List.of());
@@ -165,7 +165,7 @@ class ProductRecommendationServiceTest {
         merchantMatch.setMerchantName("Amazon");
         neutralPair.setMerchantName("Myntra");
 
-        when(productsRepository.findByIsActiveTrueOrderByCreatedAtDesc())
+        when(productsRepository.findByIsActiveTrueAndStatusOrderByCreatedAtDesc("APPROVED"))
                 .thenReturn(List.of(neutralPair, merchantMatch, wishlistProduct));
         when(usersRepository.findById(user.getUserId())).thenReturn(Optional.of(user));
         when(wishListRepository.findByUserWithProductAndBrand(user))
@@ -190,7 +190,7 @@ class ProductRecommendationServiceTest {
         Products trainingPair = product("Training Pair", "Puma", "Training", BigDecimal.valueOf(10000), 3);
         Products skatePair = product("Skate Pair", "Vans", "Skate", BigDecimal.valueOf(10000), 4);
 
-        when(productsRepository.findByIsActiveTrueOrderByCreatedAtDesc())
+        when(productsRepository.findByIsActiveTrueAndStatusOrderByCreatedAtDesc("APPROVED"))
                 .thenReturn(List.of(runningOne, runningTwo, trainingPair, skatePair));
 
         ProductRecommendationService.RecommendationResult result = recommendationService.getRecommendedProducts(null);

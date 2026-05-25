@@ -49,6 +49,7 @@ public class ProductRecommendationService {
     private static final int RECOMMENDATION_CANDIDATE_LIMIT = 250;
     private static final int RECOMMENDATION_RESULT_LIMIT = 60;
     private static final int MIN_PERSONALIZATION_SIGNALS = 20;
+    private static final String APPROVED_STATUS = "APPROVED";
 
     private final ProductsRepository productsRepository;
     private final UsersRepository usersRepository;
@@ -58,7 +59,8 @@ public class ProductRecommendationService {
 
     @Transactional(readOnly = true)
     public RecommendationResult getRecommendedProducts(UUID userId) {
-        List<Products> activeProducts = productsRepository.findByIsActiveTrueOrderByCreatedAtDesc();
+        List<Products> activeProducts =
+                productsRepository.findByIsActiveTrueAndStatusOrderByCreatedAtDesc(APPROVED_STATUS);
 
         if (activeProducts.isEmpty()) {
             return new RecommendationResult(List.of(), false);

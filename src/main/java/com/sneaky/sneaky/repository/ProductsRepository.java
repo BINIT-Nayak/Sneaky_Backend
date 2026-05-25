@@ -17,6 +17,9 @@ public interface ProductsRepository extends JpaRepository<Products, UUID> {
     List<Products> findByIsActiveTrueOrderByCreatedAtDesc();
 
     @EntityGraph(attributePaths = "brand")
+    List<Products> findByIsActiveTrueAndStatusOrderByCreatedAtDesc(String status);
+
+    @EntityGraph(attributePaths = "brand")
     List<Products> findByProductIdIn(List<UUID> productIds);
 
     long countByIsActiveTrue();

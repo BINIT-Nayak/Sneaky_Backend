@@ -58,7 +58,7 @@ class ProductServiceTest {
         UUID productId = UUID.randomUUID();
         Products product = product(productId, brand(UUID.randomUUID(), "Nike"));
 
-        when(productsRepository.findByIsActiveTrueOrderByCreatedAtDesc()).thenReturn(List.of(product));
+        when(productsRepository.findByIsActiveTrueAndStatusOrderByCreatedAtDesc("APPROVED")).thenReturn(List.of(product));
 
         assertThat(productService.getActiveProducts()).singleElement().satisfies(dto -> {
             assertThat(dto.getId()).isEqualTo(productId);

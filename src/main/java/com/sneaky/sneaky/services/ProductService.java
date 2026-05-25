@@ -32,6 +32,7 @@ public class ProductService {
     private static final String DEFAULT_STOCK_STATUS = "In stock";
     private static final String DEFAULT_MERCHANT_NAME = "Sneaky Partner";
     private static final String DEFAULT_MERCHANT_URL = "https://www.google.com/";
+    private static final String APPROVED_STATUS = "APPROVED";
 
     private final ProductsRepository productsRepository;
     private final BrandsRepository brandsRepository;
@@ -41,7 +42,7 @@ public class ProductService {
 
     @Transactional(readOnly = true)
     public List<ProductDTO> getActiveProducts() {
-        return productsRepository.findByIsActiveTrueOrderByCreatedAtDesc()
+        return productsRepository.findByIsActiveTrueAndStatusOrderByCreatedAtDesc(APPROVED_STATUS)
                 .stream()
                 .map(product -> toDTO(product, false))
                 .toList();
@@ -60,13 +61,13 @@ public class ProductService {
 
     @Transactional(readOnly = true)
     public ProductDTO getProductById(UUID id) {
-        Products product = getProductEntity(id);
+        Products product = getPublicProductEntity(id);
         return toDTO(product);
     }
 
     @Transactional(readOnly = true)
     public ProductDTO getProductById(UUID id, UUID viewerUserId) {
-        Products product = getProductEntity(id);
+        Products product = getPublicProductEntity(id);
         publishProductEvent(UserActivityEventType.PRODUCT_VIEWED, viewerUserId, id, null);
         return toDTO(product);
     }
@@ -202,6 +203,16 @@ public class ProductService {
     private Products getProductEntity(UUID id) {
         return productsRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+    }
+
+    private Products getPublicProductEntity(UUID id) {
+        Products product = getProductEntity(id);
+
+        if (!Boolean.TRUE.equals(product.getIsActive()) || !APPROVED_STATUS.equalsIgnoreCase(product.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found");
+        }
+
+        return product;
     }
 
     private ProductDTO toDTO(Products product) {

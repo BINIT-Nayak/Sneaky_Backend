@@ -30,6 +30,16 @@ class ProductsRepositoryTest {
     }
 
     @Test
+    void findByIsActiveTrueAndStatusOrderByCreatedAtDescHasExpectedSpringDataContract() throws Exception {
+        Method method = ProductsRepository.class.getMethod(
+                "findByIsActiveTrueAndStatusOrderByCreatedAtDesc",
+                String.class);
+
+        assertThat(method.getReturnType()).isEqualTo(List.class);
+        assertThat(method.getGenericReturnType().getTypeName()).contains(Products.class.getName());
+    }
+
+    @Test
     void countByIsActiveTrueHasExpectedSpringDataContract() throws Exception {
         Method method = ProductsRepository.class.getMethod("countByIsActiveTrue");
 

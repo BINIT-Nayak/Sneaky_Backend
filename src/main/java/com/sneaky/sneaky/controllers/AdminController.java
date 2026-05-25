@@ -184,6 +184,7 @@ public class AdminController {
 
         Products product = findProduct(productId);
         product.setStatus("REJECTED");
+        product.setIsActive(false);
         product.setRejectionReason(reason);
         product.setUpdatedAt(LocalDateTime.now());
         productsRepository.save(product);

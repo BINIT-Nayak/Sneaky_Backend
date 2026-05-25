@@ -16,6 +16,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -32,6 +33,7 @@ import com.sneaky.sneaky.services.AuthService;
 import com.sneaky.sneaky.services.UserService;
 
 class UserControllerTest {
+        private static final String REFRESH_COOKIE_NAME = "sneaky_refresh_token";
 
         private final UserService userService = org.mockito.Mockito.mock(UserService.class);
         private final AuthService authService = org.mockito.Mockito.mock(AuthService.class);
@@ -43,7 +45,8 @@ class UserControllerTest {
         void setUp() {
                 LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
                 validator.afterPropertiesSet();
-                mockMvc = MockMvcBuilders.standaloneSetup(new UserController(userService, authService, currentUser))
+                mockMvc = MockMvcBuilders.standaloneSetup(
+                                new UserController(userService, authService, currentUser, false, "Lax"))
                                 .setValidator(validator)
                                 .build();
         }
@@ -79,7 +82,9 @@ class UserControllerTest {
                                 .content(objectMapper.writeValueAsString(request)))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.accessToken").value("access"))
-                                .andExpect(jsonPath("$.refreshToken").doesNotExist());
+                                .andExpect(jsonPath("$.refreshToken").doesNotExist())
+                                .andExpect(cookie().httpOnly(REFRESH_COOKIE_NAME, true))
+                                .andExpect(cookie().value(REFRESH_COOKIE_NAME, "refresh"));
 
                 verify(userService).createUser(any(CreateUserRequestDTO.class));
                 verify(authService).authenticate(any(LoginRequestDTO.class));
