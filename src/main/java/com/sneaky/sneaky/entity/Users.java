@@ -42,4 +42,25 @@ public class Users {
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
+    
+    @Column(name = "is_banned")
+    private Boolean isBanned = false;
+    
+    @Column(name = "last_login")
+    private LocalDateTime lastLogin;
+    
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    public boolean isAdmin() {
+        return "ADMIN".equalsIgnoreCase(this.role);
+    }
+
+    public boolean isModerator() {
+        return "MODERATOR".equalsIgnoreCase(this.role);
+    }
+
+    public boolean hasAdminAccess() {
+        return isAdmin() || isModerator();
+    }
 }

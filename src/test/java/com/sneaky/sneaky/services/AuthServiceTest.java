@@ -62,7 +62,7 @@ class AuthServiceTest {
 
         when(userRepository.findByEmail("dev@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("plain", "encoded")).thenReturn(true);
-        when(jwtUtil.generateAccessToken(USER_ID)).thenReturn("access-token");
+        when(jwtUtil.generateAccessToken(USER_ID, "USER")).thenReturn("access-token");
         when(jwtUtil.generateRefreshToken(USER_ID)).thenReturn("refresh-token");
 
         AuthTokensDTO response = authService.authenticate(request);
@@ -108,7 +108,7 @@ class AuthServiceTest {
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         when(valueOperations.get("auth:logout:" + USER_ID)).thenReturn(null);
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user("dev@example.com", "encoded")));
-        when(jwtUtil.generateAccessToken(USER_ID)).thenReturn("new-access-token");
+        when(jwtUtil.generateAccessToken(USER_ID, "USER")).thenReturn("new-access-token");
 
         RefreshResponseDTO response = authService.refresh("refresh-token");
 

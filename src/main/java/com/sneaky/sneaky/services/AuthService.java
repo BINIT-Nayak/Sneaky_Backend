@@ -1,6 +1,7 @@
 package com.sneaky.sneaky.services;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.Locale;
 
@@ -41,10 +42,21 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
         }
 
-        String accessToken = jwtUtil.generateAccessToken(user.getUserId());
+        // Check if user is banned
+        if (user.getIsBanned() != null && user.getIsBanned()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Your account has been banned. Please contact support.");
+        }
+
+        // Update last login
+        user.setLastLogin(LocalDateTime.now());
+        user.setUpdatedAt(LocalDateTime.now());
+        userRepository.save(user);
+
+        // Generate token with role
+        String accessToken = generateAccessToken(user.getUserId(), user.getRole());
         String refreshToken = jwtUtil.generateRefreshToken(user.getUserId());
 
-        return new AuthTokensDTO(accessToken, refreshToken);
+        return new AuthTokensDTO(accessToken, refreshToken, normalizeRole(user.getRole()));
     }
 
     public RefreshResponseDTO refresh(String refreshToken) {
@@ -68,10 +80,10 @@ public class AuthService {
                 throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token");
             }
 
-            userRepository.findById(userId)
+            Users user = userRepository.findById(userId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
 
-            String newAccessToken = jwtUtil.generateAccessToken(userId);
+            String newAccessToken = generateAccessToken(userId, user.getRole());
             return new RefreshResponseDTO(newAccessToken);
 
         } catch (Exception e) {
@@ -121,9 +133,26 @@ public class AuthService {
 
         Users user = userService.createUser(request);
 
-        String accessToken = jwtUtil.generateAccessToken(user.getUserId());
+        String accessToken = generateAccessToken(user.getUserId(), user.getRole());
         String refreshToken = jwtUtil.generateRefreshToken(user.getUserId());
 
-        return new AuthTokensDTO(accessToken, refreshToken);
+        return new AuthTokensDTO(accessToken, refreshToken, normalizeRole(user.getRole()));
+    }
+
+    private String generateAccessToken(java.util.UUID userId, String role) {
+        return jwtUtil.generateAccessToken(userId, normalizeRole(role));
+    }
+
+    private String normalizeRole(String role) {
+        if (role == null || role.isBlank()) {
+            return "USER";
+        }
+
+        String normalizedRole = role.trim().toUpperCase(Locale.ROOT);
+        if (normalizedRole.startsWith("ROLE_")) {
+            return normalizedRole.substring("ROLE_".length());
+        }
+
+        return normalizedRole;
     }
 }

@@ -8,8 +8,13 @@ import lombok.Getter;
 public class AuthTokensDTO {
     private String accessToken;
     private String refreshToken;
+    private String role;
+
+    public AuthTokensDTO(String accessToken, String refreshToken) {
+        this(accessToken, refreshToken, "USER");
+    }
 
     public LoginResponseDTO toLoginResponse() {
-        return new LoginResponseDTO(accessToken);
+        return new LoginResponseDTO(accessToken, role);
     }
 }

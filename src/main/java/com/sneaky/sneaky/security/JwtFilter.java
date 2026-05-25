@@ -2,7 +2,6 @@ package com.sneaky.sneaky.security;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Locale;
 import java.util.UUID;
 
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -62,11 +61,13 @@ public class JwtFilter extends OncePerRequestFilter {
 
                 if (userId != null
                         && user != null
+                        && !Boolean.TRUE.equals(user.getIsBanned())
                         && !isLoggedOutToken(userId, token)
                         && SecurityContextHolder.getContext().getAuthentication() == null) {
-                    String role = user.getRole() == null ? "USER" : user.getRole().trim().toUpperCase(Locale.ROOT);
+                    List<SimpleGrantedAuthority> authorities = List.of(
+                            new SimpleGrantedAuthority("ROLE_" + normalizeRole(user.getRole())));
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userId.toString(),
-                            null, List.of(new SimpleGrantedAuthority("ROLE_" + role)));
+                            null, authorities);
 
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -89,5 +90,18 @@ public class JwtFilter extends OncePerRequestFilter {
             log.warn("Logout token check skipped because Redis is unavailable", ex);
             return false;
         }
+    }
+
+    private String normalizeRole(String role) {
+        if (role == null || role.isBlank()) {
+            return "USER";
+        }
+
+        String normalizedRole = role.trim().toUpperCase();
+        if (normalizedRole.startsWith("ROLE_")) {
+            return normalizedRole.substring("ROLE_".length());
+        }
+
+        return normalizedRole;
     }
 }

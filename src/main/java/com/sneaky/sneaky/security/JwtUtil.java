@@ -2,11 +2,13 @@ package com.sneaky.sneaky.security;
 
 import java.security.Key;
 import java.util.Date;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
@@ -25,16 +27,45 @@ public class JwtUtil {
         this.key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
     }
 
+    public String generateAccessToken(UUID userId, String role) {
+        return generateToken(
+                userId,
+                ACCESS_TOKEN_EXPIRY,
+                ACCESS_TOKEN_TYPE,
+                null,
+                Map.of("role", normalizeRole(role), "userId", userId.toString()));
+    }
+
     public String generateAccessToken(UUID userId) {
-        return generateToken(userId, ACCESS_TOKEN_EXPIRY, ACCESS_TOKEN_TYPE, null);
+        return generateAccessToken(userId, "USER");
     }
 
     public String generateRefreshToken(UUID userId) {
-        return generateToken(userId, REFRESH_TOKEN_EXPIRY, REFRESH_TOKEN_TYPE, UUID.randomUUID().toString());
+        return generateToken(
+                userId,
+                REFRESH_TOKEN_EXPIRY,
+                REFRESH_TOKEN_TYPE,
+                UUID.randomUUID().toString(),
+                Map.of());
     }
 
-    private String generateToken(UUID userId, long expiryTime, String tokenType, String tokenId) {
+    public String generateAdminToken(UUID userId, String role) {
+        return generateToken(
+                userId,
+                ACCESS_TOKEN_EXPIRY,
+                ACCESS_TOKEN_TYPE,
+                null,
+                Map.of("role", normalizeRole(role), "userId", userId.toString(), "isAdmin", true));
+    }
+
+    private String generateToken(
+            UUID userId,
+            long expiryTime,
+            String tokenType,
+            String tokenId,
+            Map<String, Object> claims) {
         var builder = Jwts.builder()
+                .setClaims(claims)
                 .setSubject(userId.toString())
                 .claim(TOKEN_TYPE_CLAIM, tokenType)
                 .setIssuedAt(new Date())
@@ -48,50 +79,41 @@ public class JwtUtil {
     }
 
     public UUID extractUserId(String token) {
-        String subject = Jwts.parserBuilder()
-                .setSigningKey(key)
-                .build()
-                .parseClaimsJws(token)
-                .getBody()
-                .getSubject();
-
+        String subject = getClaims(token).getSubject();
         return UUID.fromString(subject);
     }
 
-    public Date extractExpiration(String token) {
+    public String extractRole(String token) {
+        return getClaims(token).get("role", String.class);
+    }
+
+    public boolean isAdminToken(String token) {
+        String role = extractRole(token);
+        return "ADMIN".equals(role) || "MODERATOR".equals(role);
+    }
+
+    private Claims getClaims(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(key)
                 .build()
                 .parseClaimsJws(token)
-                .getBody()
-                .getExpiration();
+                .getBody();
+    }
+
+    public Date extractExpiration(String token) {
+        return getClaims(token).getExpiration();
     }
 
     public Date extractIssuedAt(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(key)
-                .build()
-                .parseClaimsJws(token)
-                .getBody()
-                .getIssuedAt();
+        return getClaims(token).getIssuedAt();
     }
 
     public String extractTokenType(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(key)
-                .build()
-                .parseClaimsJws(token)
-                .getBody()
-                .get(TOKEN_TYPE_CLAIM, String.class);
+        return getClaims(token).get(TOKEN_TYPE_CLAIM, String.class);
     }
 
     public String extractTokenId(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(key)
-                .build()
-                .parseClaimsJws(token)
-                .getBody()
-                .getId();
+        return getClaims(token).getId();
     }
 
     public boolean isAccessToken(String token) {
@@ -100,5 +122,18 @@ public class JwtUtil {
 
     public boolean isRefreshToken(String token) {
         return REFRESH_TOKEN_TYPE.equals(extractTokenType(token)) && extractTokenId(token) != null;
+    }
+
+    private String normalizeRole(String role) {
+        if (role == null || role.isBlank()) {
+            return "USER";
+        }
+
+        String normalizedRole = role.trim().toUpperCase();
+        if (normalizedRole.startsWith("ROLE_")) {
+            return normalizedRole.substring("ROLE_".length());
+        }
+
+        return normalizedRole;
     }
 }

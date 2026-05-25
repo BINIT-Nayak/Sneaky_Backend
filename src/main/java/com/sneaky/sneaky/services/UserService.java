@@ -29,7 +29,8 @@ public class UserService {
                 user.getUserId(),
                 user.getName(),
                 user.getEmail(),
-                user.getIsGuest());
+                user.getIsGuest(),
+                user.getRole());
     }
 
     public List<UserDTO> getAllUsers() {
@@ -83,6 +84,7 @@ public class UserService {
         if (request.getPassword() != null) {
             user.setPassword(passwordEncoder.encode(request.getPassword()));
         }
+        user.setUpdatedAt(java.time.LocalDateTime.now());
 
         return toDTO(userRepository.save(user));
     }
@@ -106,6 +108,7 @@ public class UserService {
         if (request.getPassword() != null) {
             user.setPassword(passwordEncoder.encode(request.getPassword()));
         }
+        user.setUpdatedAt(java.time.LocalDateTime.now());
 
         return toDTO(userRepository.save(user));
     }

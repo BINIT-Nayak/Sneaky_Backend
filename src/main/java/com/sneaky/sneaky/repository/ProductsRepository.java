@@ -3,6 +3,8 @@ package com.sneaky.sneaky.repository;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -18,4 +20,8 @@ public interface ProductsRepository extends JpaRepository<Products, UUID> {
     List<Products> findByProductIdIn(List<UUID> productIds);
 
     long countByIsActiveTrue();
+
+    Page<Products> findByStatus(String status, Pageable pageable);
+
+    long countByStatus(String status);
 }
