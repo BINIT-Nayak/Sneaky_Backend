@@ -47,7 +47,7 @@ public class ProductRecommendationService {
     private static final int POPULAR_PRODUCT_LIMIT = 100;
     private static final int DIVERSITY_WINDOW_SIZE = 4;
     private static final int RECOMMENDATION_CANDIDATE_LIMIT = 250;
-    private static final int RECOMMENDATION_RESULT_LIMIT = 60;
+    private static final int RECOMMENDATION_RESULT_LIMIT = 30;
     private static final int MIN_PERSONALIZATION_SIGNALS = 20;
     private static final String APPROVED_STATUS = "APPROVED";
 

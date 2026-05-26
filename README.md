@@ -32,7 +32,7 @@ The backend handles:
 - 🚀 Redis caching integration
 - 🧠 Rule-based product recommendation model
 - 🧪 Product catalog seeding for recommendation testing
-- ❤️ Wishlist APIs, including clear-all support
+- ❤️ Wishlist APIs, including clear-all and one-call move-to-cart support
 - 🛒 Cart APIs
 - 📈 Product analytics counters and recently viewed products
 - 📦 Clean layered architecture
@@ -213,6 +213,8 @@ If a product has no merchant URL, the backend falls back to `https://www.google.
 
 Kafka support is opt-in for local development. When Kafka is enabled, the backend publishes user activity events for product views, cart actions, and wishlist actions to `sneaky.user-activity`. A Kafka consumer processes those events into Redis.
 
+Kafka publishing runs outside the API request thread, so local Kafka latency should not block cart, wishlist, or product responses.
+
 Enable it with:
 
 ```bash
@@ -253,11 +255,14 @@ Wishlist endpoints require authentication:
 ```http
 GET /api/wishlist
 POST /api/wishlist
+POST /api/wishlist/{productId}/move-to-cart
 DELETE /api/wishlist/{productId}
 DELETE /api/wishlist
 ```
 
 `DELETE /api/wishlist` clears every wishlist item for the current user.
+
+`POST /api/wishlist/{productId}/move-to-cart` adds or increments the product in the cart and removes it from the wishlist in one transaction. The endpoint returns the updated cart item.
 
 ## 🛡️ Security Features
 

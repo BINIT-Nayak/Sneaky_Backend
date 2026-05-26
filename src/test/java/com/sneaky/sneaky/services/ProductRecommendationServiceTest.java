@@ -201,6 +201,27 @@ class ProductRecommendationServiceTest {
                 .containsExactly("Running One", "Training Pair", "Skate Pair", "Running Two");
     }
 
+    @Test
+    void recommendationsReturnAtMostThirtyProducts() {
+        List<Products> products = new ArrayList<>();
+
+        for (int index = 0; index < 35; index += 1) {
+            products.add(product(
+                    "Product " + index,
+                    "Brand " + index,
+                    "Category " + index,
+                    BigDecimal.valueOf(1000 + index),
+                    index));
+        }
+
+        when(productsRepository.findByIsActiveTrueAndStatusOrderByCreatedAtDesc("APPROVED"))
+                .thenReturn(products);
+
+        ProductRecommendationService.RecommendationResult result = recommendationService.getRecommendedProducts(null);
+
+        assertThat(result.products()).hasSize(30);
+    }
+
     private static Users user() {
         Users user = new Users();
         user.setUserId(UUID.randomUUID());
