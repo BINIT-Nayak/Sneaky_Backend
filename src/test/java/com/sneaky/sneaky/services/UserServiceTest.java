@@ -70,11 +70,11 @@ class UserServiceTest {
         UUID savedId = UUID.randomUUID();
         CreateUserRequestDTO request = new CreateUserRequestDTO();
         request.setName("Mina");
-        request.setEmail("mina@example.com");
+        request.setEmail("Mina@Example.com");
         request.setPassword("secret123");
         request.setIsGuest(false);
 
-        when(userRepository.existsByEmail("mina@example.com")).thenReturn(false);
+        when(userRepository.existsByEmailIgnoreCase("mina@example.com")).thenReturn(false);
         when(passwordEncoder.encode("secret123")).thenReturn("encoded-password");
         when(userRepository.save(any(Users.class))).thenAnswer(invocation -> {
             Users user = invocation.getArgument(0);
@@ -101,7 +101,7 @@ class UserServiceTest {
         request.setEmail("Mina@Example.com");
         request.setPassword("secret123");
 
-        when(userRepository.existsByEmail("mina@example.com")).thenReturn(true);
+        when(userRepository.existsByEmailIgnoreCase("mina@example.com")).thenReturn(true);
 
         assertThatThrownBy(() -> userService.createUser(request))
                 .isInstanceOf(ResponseStatusException.class)

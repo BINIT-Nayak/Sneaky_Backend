@@ -2,7 +2,6 @@ package com.sneaky.sneaky.services;
 
 import java.util.List;
 import java.time.Duration;
-import java.util.Locale;
 import java.util.UUID;
 
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -14,6 +13,7 @@ import org.springframework.web.server.ResponseStatusException;
 import com.sneaky.sneaky.dto.user.*;
 import com.sneaky.sneaky.entity.Users;
 import com.sneaky.sneaky.repository.UsersRepository;
+import com.sneaky.sneaky.util.EmailNormalizer;
 
 import lombok.AllArgsConstructor;
 
@@ -42,9 +42,9 @@ public class UserService {
     }
 
     public Users createUser(CreateUserRequestDTO request) {
-        String normalizedEmail = request.getEmail().trim().toLowerCase(Locale.ROOT);
+        String normalizedEmail = EmailNormalizer.normalize(request.getEmail());
 
-        if (userRepository.existsByEmail(normalizedEmail)) {
+        if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "User already exists");
         }
 
@@ -73,8 +73,9 @@ public class UserService {
 
         user.setName(request.getName());
         if (request.getEmail() != null) {
-            String normalizedEmail = request.getEmail().trim().toLowerCase(Locale.ROOT);
-            if (!normalizedEmail.equals(user.getEmail()) && userRepository.existsByEmail(normalizedEmail)) {
+            String normalizedEmail = EmailNormalizer.normalize(request.getEmail());
+            if (!normalizedEmail.equalsIgnoreCase(user.getEmail())
+                    && userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already in use");
             }
             user.setEmail(normalizedEmail);
@@ -96,8 +97,9 @@ public class UserService {
         if (request.getName() != null)
             user.setName(request.getName());
         if (request.getEmail() != null) {
-            String normalizedEmail = request.getEmail().trim().toLowerCase(Locale.ROOT);
-            if (!normalizedEmail.equals(user.getEmail()) && userRepository.existsByEmail(normalizedEmail)) {
+            String normalizedEmail = EmailNormalizer.normalize(request.getEmail());
+            if (!normalizedEmail.equalsIgnoreCase(user.getEmail())
+                    && userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already in use");
             }
             user.setEmail(normalizedEmail);

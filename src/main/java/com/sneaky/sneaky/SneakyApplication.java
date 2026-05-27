@@ -1,7 +1,6 @@
 package com.sneaky.sneaky;
 
 import java.util.List;
-import java.util.Locale;
 
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -9,6 +8,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.beans.factory.annotation.Value;
 
 import com.sneaky.sneaky.repository.UsersRepository;
+import com.sneaky.sneaky.util.EmailNormalizer;
 
 @SpringBootApplication
 public class SneakyApplication implements CommandLineRunner {
@@ -31,9 +31,9 @@ public class SneakyApplication implements CommandLineRunner {
 	public void run(String... args) throws Exception {
 		System.out.println("Sneaky Application Started!");
 		adminEmails.stream()
-				.map(email -> email.trim().toLowerCase(Locale.ROOT))
+				.map(EmailNormalizer::normalize)
 				.filter(email -> !email.isBlank())
-				.forEach(email -> usersRepository.findByEmail(email).ifPresent(user -> {
+				.forEach(email -> usersRepository.findByEmailIgnoreCase(email).ifPresent(user -> {
 					if (!"ADMIN".equalsIgnoreCase(user.getRole())) {
 						user.setRole("ADMIN");
 						usersRepository.save(user);

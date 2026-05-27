@@ -19,6 +19,7 @@ import com.sneaky.sneaky.dto.user.CreateUserRequestDTO;
 import com.sneaky.sneaky.entity.Users;
 import com.sneaky.sneaky.repository.UsersRepository;
 import com.sneaky.sneaky.security.JwtUtil;
+import com.sneaky.sneaky.util.EmailNormalizer;
 
 import lombok.AllArgsConstructor;
 
@@ -33,9 +34,9 @@ public class AuthService {
     private final StringRedisTemplate redisTemplate;
 
     public AuthTokensDTO authenticate(LoginRequestDTO loginRequest) {
-        String normalizedEmail = loginRequest.getEmail().trim().toLowerCase(Locale.ROOT);
+        String normalizedEmail = EmailNormalizer.normalize(loginRequest.getEmail());
 
-        Users user = userRepository.findByEmail(normalizedEmail)
+        Users user = userRepository.findByEmailIgnoreCase(normalizedEmail)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials"));
 
         if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
@@ -48,6 +49,7 @@ public class AuthService {
         }
 
         // Update last login
+        user.setEmail(normalizedEmail);
         user.setLastLogin(LocalDateTime.now());
         user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);

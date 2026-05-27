@@ -18,4 +18,19 @@ class UsersRepositoryTest {
         assertThat(method.getReturnType()).isEqualTo(Optional.class);
         assertThat(method.getGenericReturnType().getTypeName()).contains(Users.class.getName());
     }
+
+    @Test
+    void findByEmailIgnoreCaseHasExpectedSpringDataContract() throws Exception {
+        Method method = UsersRepository.class.getMethod("findByEmailIgnoreCase", String.class);
+
+        assertThat(method.getReturnType()).isEqualTo(Optional.class);
+        assertThat(method.getGenericReturnType().getTypeName()).contains(Users.class.getName());
+    }
+
+    @Test
+    void existsByEmailIgnoreCaseHasExpectedSpringDataContract() throws Exception {
+        Method method = UsersRepository.class.getMethod("existsByEmailIgnoreCase", String.class);
+
+        assertThat(method.getReturnType()).isEqualTo(boolean.class);
+    }
 }

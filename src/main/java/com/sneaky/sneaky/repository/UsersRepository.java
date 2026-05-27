@@ -14,6 +14,8 @@ import com.sneaky.sneaky.entity.Users;
 public interface UsersRepository extends JpaRepository<Users, UUID> {
     Optional<Users> findByEmail(String email);
     boolean existsByEmail(String email);
+    Optional<Users> findByEmailIgnoreCase(String email);
+    boolean existsByEmailIgnoreCase(String email);
     
     // NEW METHODS FOR ADMIN
     Page<Users> findByRole(String role, Pageable pageable);
