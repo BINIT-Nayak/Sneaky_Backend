@@ -2,6 +2,7 @@
 
 A modern, scalable, and secure backend application built using **Spring Boot**, designed to power the Sneaky platform with high performance, robust authentication, and clean architecture.
 
+LIVE: https://sneaky-4zjb.onrender.com/
 ---
 
 # 📌 Overview
