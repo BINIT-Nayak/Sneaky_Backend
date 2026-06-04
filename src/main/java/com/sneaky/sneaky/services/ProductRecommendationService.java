@@ -1,6 +1,7 @@
 package com.sneaky.sneaky.services;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -10,6 +11,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,16 +51,38 @@ public class ProductRecommendationService {
     private static final int RECOMMENDATION_CANDIDATE_LIMIT = 250;
     private static final int RECOMMENDATION_RESULT_LIMIT = 30;
     private static final int MIN_PERSONALIZATION_SIGNALS = 20;
+    private static final Duration RECOMMENDATION_CACHE_TTL = Duration.ofMinutes(15);
     private static final String APPROVED_STATUS = "APPROVED";
+    private static final String GUEST_RECOMMENDATIONS_KEY = "recommendations:guest";
+    private static final String PERSONALIZED_SUFFIX = ":personalized";
 
     private final ProductsRepository productsRepository;
     private final UsersRepository usersRepository;
     private final WishListRepository wishListRepository;
     private final CartRepository cartRepository;
     private final ProductAnalyticsService productAnalyticsService;
+    private final StringRedisTemplate redisTemplate;
 
     @Transactional(readOnly = true)
     public RecommendationResult getRecommendedProducts(UUID userId) {
+        RecommendationResult cachedResult = cachedRecommendations(userId);
+        if (cachedResult != null) {
+            return cachedResult;
+        }
+
+        RecommendationResult recommendationResult = computeRecommendedProducts(userId);
+        cacheRecommendations(userId, recommendationResult);
+        return recommendationResult;
+    }
+
+    @Transactional(readOnly = true)
+    public RecommendationResult refreshRecommendedProducts(UUID userId) {
+        RecommendationResult recommendationResult = computeRecommendedProducts(userId);
+        cacheRecommendations(userId, recommendationResult);
+        return recommendationResult;
+    }
+
+    private RecommendationResult computeRecommendedProducts(UUID userId) {
         List<Products> activeProducts =
                 productsRepository.findByIsActiveTrueAndStatusOrderByCreatedAtDesc(APPROVED_STATUS);
 
@@ -75,6 +99,71 @@ public class ProductRecommendationService {
         return usersRepository.findById(userId)
                 .map(user -> rankForUser(user, activeProducts, popularityRanks))
                 .orElseGet(() -> new RecommendationResult(rankForGuest(activeProducts, popularityRanks), false));
+    }
+
+    private RecommendationResult cachedRecommendations(UUID userId) {
+        String key = recommendationsKey(userId);
+
+        try {
+            List<String> productIds = redisTemplate.opsForList().range(key, 0, RECOMMENDATION_RESULT_LIMIT - 1);
+
+            if (productIds == null || productIds.isEmpty()) {
+                return null;
+            }
+
+            List<UUID> parsedProductIds = productIds.stream()
+                    .map(UUID::fromString)
+                    .toList();
+            List<Products> products = productsByIdsPreservingOrder(parsedProductIds);
+
+            if (products.isEmpty()) {
+                return null;
+            }
+
+            return new RecommendationResult(products, cachedPersonalized(key));
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    private boolean cachedPersonalized(String key) {
+        String personalized = redisTemplate.opsForValue().get(personalizedKey(key));
+        return Boolean.parseBoolean(personalized);
+    }
+
+    private void cacheRecommendations(UUID userId, RecommendationResult recommendationResult) {
+        String key = recommendationsKey(userId);
+
+        try {
+            redisTemplate.delete(key);
+
+            List<String> productIds = recommendationResult.products()
+                    .stream()
+                    .map(product -> product.getProductId().toString())
+                    .toList();
+
+            if (!productIds.isEmpty()) {
+                redisTemplate.opsForList().rightPushAll(key, productIds);
+            }
+
+            redisTemplate.expire(key, RECOMMENDATION_CACHE_TTL);
+            redisTemplate.opsForValue().set(
+                    personalizedKey(key),
+                    String.valueOf(recommendationResult.personalized()),
+                    RECOMMENDATION_CACHE_TTL);
+        } catch (RuntimeException e) {
+            // Recommendations are cache-aside; Redis issues should not break product browsing.
+        }
+    }
+
+    private String recommendationsKey(UUID userId) {
+        return userId == null
+                ? GUEST_RECOMMENDATIONS_KEY
+                : "recommendations:user:" + userId;
+    }
+
+    private static String personalizedKey(String recommendationsKey) {
+        return recommendationsKey + PERSONALIZED_SUFFIX;
     }
 
     private RecommendationResult rankForUser(Users user, List<Products> activeProducts, Map<UUID, Integer> popularityRanks) {

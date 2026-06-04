@@ -60,7 +60,7 @@ class AuthServiceTest {
         Users user = user("dev@example.com", "encoded");
         LoginRequestDTO request = loginRequest("Dev@Example.com", "plain");
 
-        when(userRepository.findByEmailIgnoreCase("dev@example.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmail("dev@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("plain", "encoded")).thenReturn(true);
         when(jwtUtil.generateAccessToken(USER_ID, "USER")).thenReturn("access-token");
         when(jwtUtil.generateRefreshToken(USER_ID)).thenReturn("refresh-token");
@@ -76,7 +76,7 @@ class AuthServiceTest {
     void authenticateRejectsInvalidPassword() {
         Users user = user("dev@example.com", "encoded");
 
-        when(userRepository.findByEmailIgnoreCase("dev@example.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmail("dev@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("wrong", "encoded")).thenReturn(false);
 
         assertThatThrownBy(() -> authService.authenticate(loginRequest("dev@example.com", "wrong")))

@@ -146,6 +146,7 @@ Redis is integrated for:
 - Product analytics counters
 - Most-viewed product ranking
 - Recently viewed products and product analytics counters
+- Precomputed recommendation rankings
 
 ## 🧠 Product Recommendations
 
@@ -155,7 +156,14 @@ The home feed can request recommended products through:
 GET /api/products/recommended
 ```
 
-The recommendation service ranks active products using:
+The recommendation API is cache-first. It first reads precomputed ranked product IDs from Redis:
+
+- `recommendations:guest`
+- `recommendations:user:{userId}`
+
+If cached rankings exist, the API only fetches those product records and returns them in ranked order. If the cache is empty or Redis is unavailable, it falls back to live scoring and writes the ranked IDs back to Redis with a 15-minute TTL.
+
+The live scoring model ranks active products using:
 
 - Wishlist history
 - Cart history
@@ -169,6 +177,8 @@ The recommendation service ranks active products using:
 - Diversity reranking to avoid repeating the same category, brand, or merchant in a tight loop
 
 If the user is logged out or has no history, the endpoint falls back to popularity and newest products.
+
+When Kafka analytics is enabled, the consumer refreshes a user's recommendation cache after activity events are recorded. This moves expensive ranking work out of the request path and keeps the home feed fast under a larger product catalog.
 
 The regular product endpoint is still available:
 

@@ -23,6 +23,7 @@ class RateLimitFilterTest {
     private final ValueOperations<String, String> valueOperations = org.mockito.Mockito.mock(ValueOperations.class);
     private final RateLimitFilter filter = new RateLimitFilter(
             redisTemplate,
+            true,
             3,
             300,
             3,
@@ -136,6 +137,29 @@ class RateLimitFilterTest {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/");
 
         filter.doFilter(request, new MockHttpServletResponse(), new MockFilterChain());
+
+        verify(redisTemplate, never()).opsForValue();
+    }
+
+    @Test
+    void skipsRedisWhenRateLimitingIsDisabled() throws Exception {
+        RateLimitFilter disabledFilter = new RateLimitFilter(
+                redisTemplate,
+                false,
+                3,
+                300,
+                3,
+                300,
+                30,
+                60,
+                240,
+                60,
+                60,
+                60,
+                60,
+                60);
+
+        disabledFilter.doFilter(loginRequest(), new MockHttpServletResponse(), new MockFilterChain());
 
         verify(redisTemplate, never()).opsForValue();
     }

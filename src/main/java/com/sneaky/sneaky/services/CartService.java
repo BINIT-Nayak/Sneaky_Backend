@@ -12,12 +12,15 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.sneaky.sneaky.dto.analytics.UserActivityEventType;
 import com.sneaky.sneaky.dto.cart.CartItemDTO;
+import com.sneaky.sneaky.dto.wishlist.WishlistItemDTO;
 import com.sneaky.sneaky.entity.Cart;
 import com.sneaky.sneaky.entity.Products;
 import com.sneaky.sneaky.entity.Users;
+import com.sneaky.sneaky.entity.WishList;
 import com.sneaky.sneaky.repository.CartRepository;
 import com.sneaky.sneaky.repository.ProductsRepository;
 import com.sneaky.sneaky.repository.UsersRepository;
+import com.sneaky.sneaky.repository.WishListRepository;
 import com.sneaky.sneaky.services.analytics.ActivityEventPublisher;
 import com.sneaky.sneaky.services.analytics.UserActivityEventFactory;
 
@@ -28,6 +31,7 @@ import lombok.RequiredArgsConstructor;
 public class CartService {
 
     private final CartRepository cartRepository;
+    private final WishListRepository wishListRepository;
     private final UsersRepository usersRepository;
     private final ProductsRepository productsRepository;
     private final ActivityEventPublisher activityEventPublisher;
@@ -99,6 +103,32 @@ public class CartService {
     }
 
     @Transactional
+    public WishlistItemDTO moveToWishlist(UUID userId, UUID productId) {
+        Cart cart = cartRepository.findByUserIdAndProductIdWithProductAndBrand(userId, productId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        Users user = cart.getUser();
+        Products product = cart.getProduct();
+
+        WishList wishlist = wishListRepository.findByUserAndProduct(user, product)
+                .map(existingWishlist -> {
+                    existingWishlist.setCreatedAt(LocalDateTime.now());
+                    return existingWishlist;
+                })
+                .orElseGet(() -> WishList.builder()
+                        .user(user)
+                        .product(product)
+                        .createdAt(LocalDateTime.now())
+                        .build());
+
+        WishList savedWishlist = wishListRepository.save(wishlist);
+        cartRepository.delete(cart);
+        publishWishlistEvent(UserActivityEventType.WISHLIST_ADDED, userId, productId);
+        publishCartEvent(UserActivityEventType.CART_REMOVED, userId, productId, null);
+
+        return toWishlistDto(savedWishlist);
+    }
+
+    @Transactional
     public void clearCart(UUID userId) {
         Users user = getUser(userId);
         cartRepository.deleteByUser(user);
@@ -149,7 +179,27 @@ public class CartService {
                 ProductService.resolveStockStatus(product.getStockStatus()));
     }
 
+    private WishlistItemDTO toWishlistDto(WishList wishlist) {
+        Products product = wishlist.getProduct();
+        String brandName = product.getBrand() == null ? "" : product.getBrand().getName();
+
+        return new WishlistItemDTO(
+                product.getProductId(),
+                product.getName(),
+                product.getPrice(),
+                product.getImageUrl(),
+                brandName,
+                product.getCategory(),
+                ProductService.resolveSizes(product.getSizes()),
+                ProductService.toColorDtos(product.getColors()),
+                ProductService.resolveStockStatus(product.getStockStatus()));
+    }
+
     private void publishCartEvent(UserActivityEventType eventType, UUID userId, UUID productId, Integer quantity) {
         activityEventPublisher.publish(activityEventFactory.create(eventType, userId, productId, quantity));
+    }
+
+    private void publishWishlistEvent(UserActivityEventType eventType, UUID userId, UUID productId) {
+        activityEventPublisher.publish(activityEventFactory.create(eventType, userId, productId, null));
     }
 }

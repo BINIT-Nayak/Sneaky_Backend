@@ -23,13 +23,16 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.sneaky.sneaky.dto.cart.CartItemDTO;
+import com.sneaky.sneaky.dto.wishlist.WishlistItemDTO;
 import com.sneaky.sneaky.entity.Brands;
 import com.sneaky.sneaky.entity.Cart;
 import com.sneaky.sneaky.entity.Products;
 import com.sneaky.sneaky.entity.Users;
+import com.sneaky.sneaky.entity.WishList;
 import com.sneaky.sneaky.repository.CartRepository;
 import com.sneaky.sneaky.repository.ProductsRepository;
 import com.sneaky.sneaky.repository.UsersRepository;
+import com.sneaky.sneaky.repository.WishListRepository;
 import com.sneaky.sneaky.services.analytics.ActivityEventPublisher;
 import com.sneaky.sneaky.services.analytics.UserActivityEventFactory;
 
@@ -38,6 +41,9 @@ class CartServiceTest {
 
     @Mock
     private CartRepository cartRepository;
+
+    @Mock
+    private WishListRepository wishListRepository;
 
     @Mock
     private UsersRepository usersRepository;
@@ -169,6 +175,50 @@ class CartServiceTest {
     }
 
     @Test
+    void moveToWishlistCreatesWishlistItemAndRemovesCartItem() {
+        Users user = user(UUID.randomUUID());
+        Products product = product(UUID.randomUUID(), brand("Nike"));
+        Cart cart = cart(user, product, 2);
+
+        when(cartRepository.findByUserIdAndProductIdWithProductAndBrand(user.getUserId(), product.getProductId()))
+                .thenReturn(Optional.of(cart));
+        when(wishListRepository.findByUserAndProduct(user, product)).thenReturn(Optional.empty());
+        when(wishListRepository.save(any(WishList.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        WishlistItemDTO movedItem = cartService.moveToWishlist(user.getUserId(), product.getProductId());
+
+        ArgumentCaptor<WishList> wishlistCaptor = ArgumentCaptor.forClass(WishList.class);
+        verify(wishListRepository).save(wishlistCaptor.capture());
+        assertThat(wishlistCaptor.getValue().getUser()).isEqualTo(user);
+        assertThat(wishlistCaptor.getValue().getProduct()).isEqualTo(product);
+        assertThat(movedItem.getProductId()).isEqualTo(product.getProductId());
+        assertThat(movedItem.getName()).isEqualTo("Air Max");
+        assertThat(movedItem.getBrandName()).isEqualTo("Nike");
+        verify(cartRepository).delete(cart);
+    }
+
+    @Test
+    void moveToWishlistRefreshesExistingWishlistItemAndRemovesCartItem() {
+        Users user = user(UUID.randomUUID());
+        Products product = product(UUID.randomUUID(), brand("Nike"));
+        Cart cart = cart(user, product, 2);
+        WishList existingWishlist = wishlist(user, product);
+        LocalDateTime previousCreatedAt = LocalDateTime.now().minusDays(1);
+        existingWishlist.setCreatedAt(previousCreatedAt);
+
+        when(cartRepository.findByUserIdAndProductIdWithProductAndBrand(user.getUserId(), product.getProductId()))
+                .thenReturn(Optional.of(cart));
+        when(wishListRepository.findByUserAndProduct(user, product)).thenReturn(Optional.of(existingWishlist));
+        when(wishListRepository.save(existingWishlist)).thenReturn(existingWishlist);
+
+        cartService.moveToWishlist(user.getUserId(), product.getProductId());
+
+        assertThat(existingWishlist.getCreatedAt()).isAfter(previousCreatedAt);
+        verify(wishListRepository).save(existingWishlist);
+        verify(cartRepository).delete(cart);
+    }
+
+    @Test
     void clearCartDeletesAllItemsForUser() {
         Users user = user(UUID.randomUUID());
 
@@ -228,6 +278,23 @@ class CartServiceTest {
         verify(cartRepository, never()).delete(any());
     }
 
+    @Test
+    void moveToWishlistRejectsMissingCartItem() {
+        UUID userId = UUID.randomUUID();
+        UUID productId = UUID.randomUUID();
+
+        when(cartRepository.findByUserIdAndProductIdWithProductAndBrand(userId, productId))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> cartService.moveToWishlist(userId, productId))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting("statusCode")
+                .isEqualTo(HttpStatus.NOT_FOUND);
+
+        verify(wishListRepository, never()).save(any());
+        verify(cartRepository, never()).delete(any());
+    }
+
     private static Users user(UUID id) {
         Users user = new Users();
         user.setUserId(id);
@@ -263,6 +330,15 @@ class CartServiceTest {
                 .quantity(quantity)
                 .price(product.getPrice())
                 .currency(product.getCurrency())
+                .createdAt(LocalDateTime.now())
+                .build();
+    }
+
+    private static WishList wishlist(Users user, Products product) {
+        return WishList.builder()
+                .wishlistId(1L)
+                .user(user)
+                .product(product)
                 .createdAt(LocalDateTime.now())
                 .build();
     }

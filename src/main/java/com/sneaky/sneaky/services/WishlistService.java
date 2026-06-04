@@ -115,7 +115,7 @@ public class WishlistService {
         Users user = wishlist.getUser();
         Products product = wishlist.getProduct();
 
-        Cart cart = cartRepository.findByUserIdAndProductIdWithProductAndBrand(userId, productId)
+        Cart cart = cartRepository.findByUserUserIdAndProductProductId(userId, productId)
                 .map(existingCart -> {
                     existingCart.setQuantity(existingCart.getQuantity() + 1);
                     existingCart.setPrice(product.getPrice());
@@ -137,7 +137,7 @@ public class WishlistService {
         publishCartEvent(UserActivityEventType.CART_ADDED, userId, productId);
         publishWishlistEvent(UserActivityEventType.WISHLIST_REMOVED, userId, productId);
 
-        return toCartDto(savedCart);
+        return toCartDto(savedCart, product);
     }
 
     @Transactional
@@ -149,7 +149,10 @@ public class WishlistService {
     }
 
     private CartItemDTO toCartDto(Cart cart) {
-        Products product = cart.getProduct();
+        return toCartDto(cart, cart.getProduct());
+    }
+
+    private CartItemDTO toCartDto(Cart cart, Products product) {
         String brandName = product.getBrand() == null ? "" : product.getBrand().getName();
         BigDecimal price = cart.getPrice() == null ? product.getPrice() : cart.getPrice();
         String currency = cart.getCurrency() == null ? product.getCurrency() : cart.getCurrency();

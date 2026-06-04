@@ -44,7 +44,8 @@ public class UserService {
     public Users createUser(CreateUserRequestDTO request) {
         String normalizedEmail = EmailNormalizer.normalize(request.getEmail());
 
-        if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
+        if (userRepository.existsByEmail(normalizedEmail)
+                || userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "User already exists");
         }
 

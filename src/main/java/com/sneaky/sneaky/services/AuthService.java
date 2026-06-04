@@ -36,7 +36,8 @@ public class AuthService {
     public AuthTokensDTO authenticate(LoginRequestDTO loginRequest) {
         String normalizedEmail = EmailNormalizer.normalize(loginRequest.getEmail());
 
-        Users user = userRepository.findByEmailIgnoreCase(normalizedEmail)
+        Users user = userRepository.findByEmail(normalizedEmail)
+                .or(() -> userRepository.findByEmailIgnoreCase(normalizedEmail))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials"));
 
         if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {

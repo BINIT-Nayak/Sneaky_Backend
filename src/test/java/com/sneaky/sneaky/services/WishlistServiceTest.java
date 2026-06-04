@@ -149,7 +149,7 @@ class WishlistServiceTest {
 
         when(wishListRepository.findByUserIdAndProductIdWithProductAndBrand(user.getUserId(), product.getProductId()))
                 .thenReturn(Optional.of(wishlist));
-        when(cartRepository.findByUserIdAndProductIdWithProductAndBrand(user.getUserId(), product.getProductId()))
+        when(cartRepository.findByUserUserIdAndProductProductId(user.getUserId(), product.getProductId()))
                 .thenReturn(Optional.empty());
         when(cartRepository.save(any(Cart.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -184,7 +184,7 @@ class WishlistServiceTest {
 
         when(wishListRepository.findByUserIdAndProductIdWithProductAndBrand(user.getUserId(), product.getProductId()))
                 .thenReturn(Optional.of(wishlist));
-        when(cartRepository.findByUserIdAndProductIdWithProductAndBrand(user.getUserId(), product.getProductId()))
+        when(cartRepository.findByUserUserIdAndProductProductId(user.getUserId(), product.getProductId()))
                 .thenReturn(Optional.of(existingCart));
         when(cartRepository.save(existingCart)).thenReturn(existingCart);
 

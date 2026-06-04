@@ -26,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class RateLimitFilter extends OncePerRequestFilter {
     private final StringRedisTemplate redisTemplate;
+    private final boolean enabled;
     private final RateLimitPolicy loginPolicy;
     private final RateLimitPolicy registerPolicy;
     private final RateLimitPolicy refreshPolicy;
@@ -35,6 +36,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     public RateLimitFilter(
             StringRedisTemplate redisTemplate,
+            @Value("${app.rate-limit.enabled:true}") boolean enabled,
             @Value("${app.rate-limit.login.limit:3}") int loginLimit,
             @Value("${app.rate-limit.login.window-seconds:300}") long loginWindowSeconds,
             @Value("${app.rate-limit.register.limit:3}") int registerLimit,
@@ -48,6 +50,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
             @Value("${app.rate-limit.analytics.limit:60}") int analyticsLimit,
             @Value("${app.rate-limit.analytics.window-seconds:60}") long analyticsWindowSeconds) {
         this.redisTemplate = redisTemplate;
+        this.enabled = enabled;
         this.loginPolicy = new RateLimitPolicy(
                 "login",
                 loginLimit,
@@ -93,7 +96,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return resolvePolicy(request) == null;
+        return !enabled || resolvePolicy(request) == null;
     }
 
     @Override

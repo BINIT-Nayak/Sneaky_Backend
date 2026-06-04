@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.data.jpa.repository.Query;
@@ -26,6 +27,14 @@ class CartRepositoryTest {
     @Test
     void findByUserAndProductHasExpectedSpringDataContract() throws Exception {
         Method method = CartRepository.class.getMethod("findByUserAndProduct", Users.class, Products.class);
+
+        assertThat(method.getReturnType()).isEqualTo(Optional.class);
+        assertThat(method.getGenericReturnType().getTypeName()).contains(Cart.class.getName());
+    }
+
+    @Test
+    void findByUserUserIdAndProductProductIdHasExpectedSpringDataContract() throws Exception {
+        Method method = CartRepository.class.getMethod("findByUserUserIdAndProductProductId", UUID.class, UUID.class);
 
         assertThat(method.getReturnType()).isEqualTo(Optional.class);
         assertThat(method.getGenericReturnType().getTypeName()).contains(Cart.class.getName());

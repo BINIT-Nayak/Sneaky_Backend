@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sneaky.sneaky.dto.cart.AddToCartRequestDTO;
 import com.sneaky.sneaky.dto.cart.CartItemDTO;
 import com.sneaky.sneaky.dto.cart.UpdateCartQuantityRequestDTO;
+import com.sneaky.sneaky.dto.wishlist.WishlistItemDTO;
 import com.sneaky.sneaky.security.CurrentUser;
 import com.sneaky.sneaky.services.CartService;
 
@@ -119,6 +120,23 @@ class CartControllerTest {
     }
 
     @Test
+    void moveToWishlistDelegatesToServiceForCurrentUser() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UUID productId = UUID.randomUUID();
+
+        when(currentUser.getUserId()).thenReturn(userId);
+        when(cartService.moveToWishlist(userId, productId)).thenReturn(wishlistItem(productId));
+
+        mockMvc.perform(post("/api/cart/{productId}/move-to-wishlist", productId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.productId").value(productId.toString()))
+                .andExpect(jsonPath("$.name").value("Air Max"))
+                .andExpect(jsonPath("$.brandName").value("Nike"));
+
+        verify(cartService).moveToWishlist(userId, productId);
+    }
+
+    @Test
     void addToCartRejectsInvalidProductIdPayload() throws Exception {
         mockMvc.perform(post("/api/cart")
                         .contentType("application/json")
@@ -164,6 +182,19 @@ class CartControllerTest {
                 "https://www.amazon.in/s?k=sneakers",
                 quantity,
                 price.multiply(BigDecimal.valueOf(quantity)),
+                List.of("UK 8", "UK 9"),
+                List.of(new com.sneaky.sneaky.dto.product.ProductColorDTO("Black", "#17151d")),
+                "In stock");
+    }
+
+    private static WishlistItemDTO wishlistItem(UUID productId) {
+        return new WishlistItemDTO(
+                productId,
+                "Air Max",
+                BigDecimal.valueOf(12999),
+                "image.jpg",
+                "Nike",
+                "Running",
                 List.of("UK 8", "UK 9"),
                 List.of(new com.sneaky.sneaky.dto.product.ProductColorDTO("Black", "#17151d")),
                 "In stock");

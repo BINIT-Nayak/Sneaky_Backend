@@ -74,6 +74,7 @@ class UserServiceTest {
         request.setPassword("secret123");
         request.setIsGuest(false);
 
+        when(userRepository.existsByEmail("mina@example.com")).thenReturn(false);
         when(userRepository.existsByEmailIgnoreCase("mina@example.com")).thenReturn(false);
         when(passwordEncoder.encode("secret123")).thenReturn("encoded-password");
         when(userRepository.save(any(Users.class))).thenAnswer(invocation -> {
@@ -101,6 +102,7 @@ class UserServiceTest {
         request.setEmail("Mina@Example.com");
         request.setPassword("secret123");
 
+        when(userRepository.existsByEmail("mina@example.com")).thenReturn(false);
         when(userRepository.existsByEmailIgnoreCase("mina@example.com")).thenReturn(true);
 
         assertThatThrownBy(() -> userService.createUser(request))
