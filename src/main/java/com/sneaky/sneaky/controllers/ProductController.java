@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -35,8 +36,10 @@ public class ProductController {
     }
 
     @GetMapping("/recommended")
-    public List<ProductDTO> getRecommendedProducts(Authentication authentication) {
-        return productService.getRecommendedProducts(authenticatedUserId(authentication));
+    public List<ProductDTO> getRecommendedProducts(
+            Authentication authentication,
+            @RequestParam(name = "excludeIds", required = false) List<UUID> excludeIds) {
+        return productService.getRecommendedProducts(authenticatedUserId(authentication), excludeIds);
     }
 
     @GetMapping("/{id}")

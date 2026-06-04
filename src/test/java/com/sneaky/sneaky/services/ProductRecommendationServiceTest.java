@@ -101,6 +101,22 @@ class ProductRecommendationServiceTest {
     }
 
     @Test
+    void recommendationsExcludeAlreadyLoadedProducts() {
+        Products alreadyLoaded = product("Already Loaded", "Nike", "Runner", BigDecimal.valueOf(12000), 2);
+        Products nextProduct = product("Next Product", "Adidas", "Lifestyle", BigDecimal.valueOf(9000), 1);
+
+        when(productsRepository.findByIsActiveTrueAndStatusOrderByCreatedAtDesc("APPROVED"))
+                .thenReturn(List.of(alreadyLoaded, nextProduct));
+
+        ProductRecommendationService.RecommendationResult result =
+                recommendationService.getRecommendedProducts(null, List.of(alreadyLoaded.getProductId()));
+
+        assertThat(result.products())
+                .extracting(Products::getName)
+                .containsExactly("Next Product");
+    }
+
+    @Test
     void userRecommendationsStayGenericUntilEnoughPreferenceSignalsExist() {
         Users user = user();
         Products newest = product("New Arrival", "Nike", "Runner", BigDecimal.valueOf(12000), 2);

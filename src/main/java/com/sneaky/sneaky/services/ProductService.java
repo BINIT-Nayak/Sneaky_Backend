@@ -50,8 +50,13 @@ public class ProductService {
 
     @Transactional(readOnly = true)
     public List<ProductDTO> getRecommendedProducts(UUID userId) {
+        return getRecommendedProducts(userId, List.of());
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProductDTO> getRecommendedProducts(UUID userId, List<UUID> excludeProductIds) {
         ProductRecommendationService.RecommendationResult recommendationResult =
-                productRecommendationService.getRecommendedProducts(userId);
+                productRecommendationService.getRecommendedProducts(userId, excludeProductIds);
 
         return recommendationResult.products()
                 .stream()

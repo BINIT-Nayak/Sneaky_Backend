@@ -65,26 +65,42 @@ public class ProductRecommendationService {
 
     @Transactional(readOnly = true)
     public RecommendationResult getRecommendedProducts(UUID userId) {
+        return getRecommendedProducts(userId, Set.of());
+    }
+
+    @Transactional(readOnly = true)
+    public RecommendationResult getRecommendedProducts(UUID userId, List<UUID> excludedProductIds) {
+        return getRecommendedProducts(userId, normalizedExcludedProductIds(excludedProductIds));
+    }
+
+    private RecommendationResult getRecommendedProducts(UUID userId, Set<UUID> excludedProductIds) {
+        if (!excludedProductIds.isEmpty()) {
+            return computeRecommendedProducts(userId, excludedProductIds);
+        }
+
         RecommendationResult cachedResult = cachedRecommendations(userId);
         if (cachedResult != null) {
             return cachedResult;
         }
 
-        RecommendationResult recommendationResult = computeRecommendedProducts(userId);
+        RecommendationResult recommendationResult = computeRecommendedProducts(userId, excludedProductIds);
         cacheRecommendations(userId, recommendationResult);
         return recommendationResult;
     }
 
     @Transactional(readOnly = true)
     public RecommendationResult refreshRecommendedProducts(UUID userId) {
-        RecommendationResult recommendationResult = computeRecommendedProducts(userId);
+        RecommendationResult recommendationResult = computeRecommendedProducts(userId, Set.of());
         cacheRecommendations(userId, recommendationResult);
         return recommendationResult;
     }
 
-    private RecommendationResult computeRecommendedProducts(UUID userId) {
+    private RecommendationResult computeRecommendedProducts(UUID userId, Set<UUID> excludedProductIds) {
         List<Products> activeProducts =
-                productsRepository.findByIsActiveTrueAndStatusOrderByCreatedAtDesc(APPROVED_STATUS);
+                productsRepository.findByIsActiveTrueAndStatusOrderByCreatedAtDesc(APPROVED_STATUS)
+                        .stream()
+                        .filter(product -> !excludedProductIds.contains(product.getProductId()))
+                        .toList();
 
         if (activeProducts.isEmpty()) {
             return new RecommendationResult(List.of(), false);
@@ -164,6 +180,14 @@ public class ProductRecommendationService {
 
     private static String personalizedKey(String recommendationsKey) {
         return recommendationsKey + PERSONALIZED_SUFFIX;
+    }
+
+    private static Set<UUID> normalizedExcludedProductIds(List<UUID> excludedProductIds) {
+        if (excludedProductIds == null || excludedProductIds.isEmpty()) {
+            return Set.of();
+        }
+
+        return new HashSet<>(excludedProductIds);
     }
 
     private RecommendationResult rankForUser(Users user, List<Products> activeProducts, Map<UUID, Integer> popularityRanks) {

@@ -52,7 +52,7 @@ class ProductControllerTest {
 
         when(productService.getActiveProducts()).thenReturn(List.of(product));
         when(productService.getProductById(productId, null)).thenReturn(product);
-        when(productService.getRecommendedProducts(null)).thenReturn(List.of(product));
+        when(productService.getRecommendedProducts(null, null)).thenReturn(List.of(product));
 
         mockMvc.perform(get("/api/products"))
                 .andExpect(status().isOk())
@@ -74,13 +74,28 @@ class ProductControllerTest {
         UUID productId = UUID.randomUUID();
         ProductDTO product = productDto(productId, "Air Max");
 
-        when(productService.getRecommendedProducts(userId)).thenReturn(List.of(product));
+        when(productService.getRecommendedProducts(userId, null)).thenReturn(List.of(product));
 
         mockMvc.perform(get("/api/products/recommended")
                         .principal(new UsernamePasswordAuthenticationToken(
                                 userId.toString(),
                                 null,
                                 List.of(new SimpleGrantedAuthority("ROLE_USER")))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(productId.toString()));
+    }
+
+    @Test
+    void recommendedProductsPassExcludeIdsToService() throws Exception {
+        UUID excludedProductId = UUID.randomUUID();
+        UUID productId = UUID.randomUUID();
+        ProductDTO product = productDto(productId, "Air Max");
+
+        when(productService.getRecommendedProducts(null, List.of(excludedProductId)))
+                .thenReturn(List.of(product));
+
+        mockMvc.perform(get("/api/products/recommended")
+                        .param("excludeIds", excludedProductId.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(productId.toString()));
     }
