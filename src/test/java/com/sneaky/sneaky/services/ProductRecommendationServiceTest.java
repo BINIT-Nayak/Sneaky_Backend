@@ -1,6 +1,7 @@
 package com.sneaky.sneaky.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -30,6 +31,7 @@ import com.sneaky.sneaky.repository.ProductsRepository;
 import com.sneaky.sneaky.repository.UsersRepository;
 import com.sneaky.sneaky.repository.WishListRepository;
 import com.sneaky.sneaky.services.analytics.ProductAnalyticsService;
+import com.sneaky.sneaky.services.recommendation.MlRankingClient;
 
 @ExtendWith(MockitoExtension.class)
 class ProductRecommendationServiceTest {
@@ -51,6 +53,9 @@ class ProductRecommendationServiceTest {
 
     @Mock
     private StringRedisTemplate redisTemplate;
+
+    @Mock
+    private MlRankingClient mlRankingClient;
 
     @Mock
     private ListOperations<String, String> listOperations;
@@ -234,6 +239,35 @@ class ProductRecommendationServiceTest {
         assertThat(result.products())
                 .extracting(Products::getName)
                 .containsExactly("Amazon Match", "Neutral Pair", "Saved Amazon Pair");
+    }
+
+    @Test
+    void mlRankingReordersPersonalizedCandidatesBeforeDiversity() {
+        Users user = user();
+        Products wishlistProduct = product("Saved Pair", "Nike", "Running", BigDecimal.valueOf(10000), 3);
+        Products ruleFavorite = product("Rule Favorite", "Nike", "Running", BigDecimal.valueOf(10500), 2);
+        Products mlFavorite = product("ML Favorite", "Vans", "Lifestyle", BigDecimal.valueOf(9000), 1);
+        WishList wishlist = WishList.builder().user(user).product(wishlistProduct).build();
+
+        when(productsRepository.findByIsActiveTrueAndStatusOrderByCreatedAtDesc("APPROVED"))
+                .thenReturn(List.of(ruleFavorite, mlFavorite, wishlistProduct));
+        when(usersRepository.findById(user.getUserId())).thenReturn(Optional.of(user));
+        when(wishListRepository.findByUserWithProductAndBrand(user))
+                .thenReturn(wishlistSignals(user, wishlist, 19));
+        when(cartRepository.findByUserWithProductAndBrand(user)).thenReturn(List.of());
+        when(productAnalyticsService.getRecentlyViewedProductIds(user.getUserId())).thenReturn(List.of());
+        when(productAnalyticsService.getPassedProductIds(user.getUserId())).thenReturn(List.of());
+        when(mlRankingClient.rank(any(), any())).thenReturn(Optional.of(List.of(
+                new MlRankingClient.RankedCandidate(mlFavorite.getProductId(), 0.95),
+                new MlRankingClient.RankedCandidate(ruleFavorite.getProductId(), 0.60),
+                new MlRankingClient.RankedCandidate(wishlistProduct.getProductId(), 0.05))));
+
+        ProductRecommendationService.RecommendationResult result =
+                recommendationService.getRecommendedProducts(user.getUserId());
+
+        assertThat(result.products())
+                .extracting(Products::getName)
+                .containsExactly("ML Favorite", "Rule Favorite", "Saved Pair");
     }
 
     @Test

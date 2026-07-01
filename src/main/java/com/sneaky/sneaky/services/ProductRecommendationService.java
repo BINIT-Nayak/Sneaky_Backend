@@ -25,6 +25,7 @@ import com.sneaky.sneaky.repository.ProductsRepository;
 import com.sneaky.sneaky.repository.UsersRepository;
 import com.sneaky.sneaky.repository.WishListRepository;
 import com.sneaky.sneaky.services.analytics.ProductAnalyticsService;
+import com.sneaky.sneaky.services.recommendation.MlRankingClient;
 
 import lombok.RequiredArgsConstructor;
 
@@ -45,6 +46,7 @@ public class ProductRecommendationService {
     private static final double CATEGORY_REPEAT_WINDOW_PENALTY = 7.0;
     private static final double BRAND_REPEAT_WINDOW_PENALTY = 3.0;
     private static final double MERCHANT_REPEAT_WINDOW_PENALTY = 2.0;
+    private static final double ML_PROBABILITY_SCORE_SCALE = 100.0;
     private static final BigDecimal PRICE_RANGE_RATIO = BigDecimal.valueOf(0.25);
     private static final int POPULAR_PRODUCT_LIMIT = 100;
     private static final int DIVERSITY_WINDOW_SIZE = 4;
@@ -62,6 +64,7 @@ public class ProductRecommendationService {
     private final CartRepository cartRepository;
     private final ProductAnalyticsService productAnalyticsService;
     private final StringRedisTemplate redisTemplate;
+    private final MlRankingClient mlRankingClient;
 
     @Transactional(readOnly = true)
     public RecommendationResult getRecommendedProducts(UUID userId) {
@@ -220,16 +223,14 @@ public class ProductRecommendationService {
         Set<UUID> passedProductIds = productIds(passedProducts);
 
         List<ScoredProduct> scoredProducts = activeProducts.stream()
-                .map(product -> new ScoredProduct(
+                .map(product -> scoredProductForUser(
                         product,
-                        scoreForUser(
-                                product,
-                                signalProducts,
-                                passedProducts,
-                                ownedProductIds,
-                                recentlyViewedProductIds,
-                                passedProductIds,
-                                popularityRanks)))
+                        signalProducts,
+                        passedProducts,
+                        ownedProductIds,
+                        recentlyViewedProductIds,
+                        passedProductIds,
+                        popularityRanks))
                 .sorted(Comparator
                         .comparingDouble(ScoredProduct::score)
                         .reversed()
@@ -239,7 +240,7 @@ public class ProductRecommendationService {
                 .limit(RECOMMENDATION_CANDIDATE_LIMIT)
                 .toList();
 
-        return new RecommendationResult(limitResults(diversify(scoredProducts)), true);
+        return new RecommendationResult(limitResults(diversify(mlRerank(user, scoredProducts))), true);
     }
 
     private List<Products> rankForGuest(List<Products> activeProducts, Map<UUID, Integer> popularityRanks) {
@@ -310,7 +311,7 @@ public class ProductRecommendationService {
         return penalty;
     }
 
-    private double scoreForUser(
+    private ScoredProduct scoredProductForUser(
             Products product,
             List<Products> signalProducts,
             List<Products> passedProducts,
@@ -319,35 +320,49 @@ public class ProductRecommendationService {
             Set<UUID> passedProductIds,
             Map<UUID, Integer> popularityRanks) {
         double score = scorePopularity(product, popularityRanks);
+        int brandMatches = 0;
+        int categoryMatches = 0;
+        int merchantMatches = 0;
+        int priceMatches = 0;
+        int passedBrandMatches = 0;
+        int passedCategoryMatches = 0;
+        int passedMerchantMatches = 0;
 
         for (Products signalProduct : signalProducts) {
             if (sameBrand(product, signalProduct)) {
+                brandMatches += 1;
                 score += BRAND_MATCH_SCORE;
             }
 
             if (sameCategory(product, signalProduct)) {
+                categoryMatches += 1;
                 score += CATEGORY_MATCH_SCORE;
             }
 
             if (similarPrice(product, signalProduct)) {
+                priceMatches += 1;
                 score += PRICE_MATCH_SCORE;
             }
 
             if (sameMerchant(product, signalProduct)) {
+                merchantMatches += 1;
                 score += MERCHANT_MATCH_SCORE;
             }
         }
 
         for (Products passedProduct : passedProducts) {
             if (sameBrand(product, passedProduct)) {
+                passedBrandMatches += 1;
                 score -= PASSED_BRAND_PENALTY;
             }
 
             if (sameCategory(product, passedProduct)) {
+                passedCategoryMatches += 1;
                 score -= PASSED_CATEGORY_PENALTY;
             }
 
             if (sameMerchant(product, passedProduct)) {
+                passedMerchantMatches += 1;
                 score -= PASSED_MERCHANT_PENALTY;
             }
         }
@@ -364,7 +379,45 @@ public class ProductRecommendationService {
             score -= OWNED_EXACT_PRODUCT_PENALTY;
         }
 
-        return score;
+        int popularityRank = popularityRanks.getOrDefault(product.getProductId(), POPULAR_PRODUCT_LIMIT);
+        double price = product.getPrice() == null ? 0.0 : product.getPrice().doubleValue();
+        MlRankingClient.CandidateFeatures features = new MlRankingClient.CandidateFeatures(
+                product.getProductId(),
+                score,
+                price,
+                popularityRank,
+                brandMatches,
+                categoryMatches,
+                merchantMatches,
+                priceMatches,
+                passedBrandMatches,
+                passedCategoryMatches,
+                passedMerchantMatches,
+                recentlyViewedProductIds.contains(product.getProductId()),
+                passedProductIds.contains(product.getProductId()),
+                ownedProductIds.contains(product.getProductId()));
+
+        return new ScoredProduct(product, score, features);
+    }
+
+    private List<ScoredProduct> mlRerank(Users user, List<ScoredProduct> candidates) {
+        List<MlRankingClient.CandidateFeatures> features = candidates.stream()
+                .map(ScoredProduct::features)
+                .toList();
+
+        return mlRankingClient.rank(user.getUserId(), features)
+                .map(rankings -> {
+                    Map<UUID, Double> scores = new LinkedHashMap<>();
+                    rankings.forEach(ranking -> scores.put(ranking.productId(), ranking.score()));
+                    return candidates.stream()
+                            .map(candidate -> new ScoredProduct(
+                                    candidate.product(),
+                                    scores.get(candidate.product().getProductId()) * ML_PROBABILITY_SCORE_SCALE,
+                                    candidate.features()))
+                            .sorted(Comparator.comparingDouble(ScoredProduct::score).reversed())
+                            .toList();
+                })
+                .orElse(candidates);
     }
 
     private double scorePopularity(Products product, Map<UUID, Integer> popularityRanks) {
@@ -495,7 +548,10 @@ public class ProductRecommendationService {
         return difference.compareTo(allowedDifference) <= 0;
     }
 
-    private record ScoredProduct(Products product, double score) {
+    private record ScoredProduct(Products product, double score, MlRankingClient.CandidateFeatures features) {
+        private ScoredProduct(Products product, double score) {
+            this(product, score, null);
+        }
     }
 
     public record RecommendationResult(List<Products> products, boolean personalized) {
