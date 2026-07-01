@@ -11,6 +11,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -24,6 +25,7 @@ public class HttpMlRankingClient implements MlRankingClient {
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
 
+    @Autowired
     public HttpMlRankingClient(
             @Value("${app.recommendations.ml.enabled:false}") boolean enabled,
             @Value("${app.recommendations.ml.base-url:http://localhost:8090}") String baseUrl,
