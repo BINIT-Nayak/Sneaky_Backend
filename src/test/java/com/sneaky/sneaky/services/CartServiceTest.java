@@ -104,6 +104,7 @@ class CartServiceTest {
         Cart existing = cart(user, product, 2);
         LocalDateTime previousCreatedAt = LocalDateTime.now().minusDays(1);
         existing.setCreatedAt(previousCreatedAt);
+        existing.setReminderSentAt(LocalDateTime.now().minusHours(1));
 
         when(usersRepository.findById(user.getUserId())).thenReturn(Optional.of(user));
         when(productsRepository.findById(product.getProductId())).thenReturn(Optional.of(product));
@@ -114,6 +115,7 @@ class CartServiceTest {
 
         assertThat(existing.getQuantity()).isEqualTo(5);
         assertThat(existing.getCreatedAt()).isAfter(previousCreatedAt);
+        assertThat(existing.getReminderSentAt()).isNull();
         assertThat(updated.getQuantity()).isEqualTo(5);
         verify(cartRepository).save(existing);
     }

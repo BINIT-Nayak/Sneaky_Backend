@@ -287,6 +287,23 @@ DELETE /api/wishlist
 
 `POST /api/wishlist/{productId}/move-to-cart` adds or increments the product in the cart and removes it from the wishlist in one transaction. The endpoint returns the updated cart item.
 
+## Cart Reminders and Notifications
+
+Sneaky checks once per day for products that have stayed in a cart for more than two days. Each eligible cart item receives one in-app notification and, when SMTP is configured, one email reminder. Adding the same product to the cart again resets the two-day reminder window.
+
+Notification endpoints require authentication:
+
+```http
+GET /api/notifications
+GET /api/notifications/unread-count
+PATCH /api/notifications/{notificationId}/read
+PATCH /api/notifications/read-all
+DELETE /api/notifications/{notificationId}
+DELETE /api/notifications
+```
+
+Configure the worker and SMTP connection with the `APP_CART_REMINDERS_*` and `SPRING_MAIL_*` variables shown in `.env.example`. The default reminder schedule is daily at 09:00 server time.
+
 ## 🛡️ Security Features
 
 - JWT Token Authentication
@@ -303,6 +320,7 @@ Major Dependencies Used
 - spring-boot-starter-security	:Security & authentication
 - spring-boot-starter-data-jpa	:Database ORM
 - spring-boot-starter-validation	:Request validation
+- spring-boot-starter-mail	:Cart reminder emails
 - spring-boot-starter-data-redis	:Redis integration
 - postgresql	:PostgreSQL driver
 - jjwt	:JWT token handling

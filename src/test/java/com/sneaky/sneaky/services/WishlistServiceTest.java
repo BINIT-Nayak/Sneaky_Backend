@@ -180,6 +180,7 @@ class WishlistServiceTest {
                 .price(BigDecimal.valueOf(9999))
                 .currency("INR")
                 .createdAt(LocalDateTime.now().minusDays(1))
+                .reminderSentAt(LocalDateTime.now().minusHours(1))
                 .build();
 
         when(wishListRepository.findByUserIdAndProductIdWithProductAndBrand(user.getUserId(), product.getProductId()))
@@ -194,6 +195,7 @@ class WishlistServiceTest {
 
         assertThat(existingCart.getQuantity()).isEqualTo(3);
         assertThat(existingCart.getPrice()).isEqualByComparingTo(product.getPrice());
+        assertThat(existingCart.getReminderSentAt()).isNull();
         verify(cartRepository).save(existingCart);
         verify(wishListRepository).delete(wishlist);
     }

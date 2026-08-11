@@ -1,7 +1,7 @@
 package com.sneaky.sneaky.entity;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -13,7 +13,6 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -21,47 +20,53 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(
-    name = "cart",
-    uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "product_id"})
-)
+@Table(name = "notifications")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Cart {
+public class Notification {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "cart_id")
-    private Long cartId;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "notification_id")
+    private UUID notificationId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private Users user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id", nullable = false)
+    @JoinColumn(name = "product_id")
     private Products product;
 
+    @Column(nullable = false, length = 120)
+    private String title;
+
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String message;
+
+    @Column(nullable = false, length = 60)
+    private String type;
+
+    @Column(name = "is_read", nullable = false)
     @Builder.Default
-    private Integer quantity = 1;
-
-    private BigDecimal price;
-
-    private String currency;
+    private Boolean read = false;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "reminder_sent_at")
-    private LocalDateTime reminderSentAt;
+    @Column(name = "read_at")
+    private LocalDateTime readAt;
 
     @PrePersist
     void prePersist() {
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
+        }
+        if (read == null) {
+            read = false;
         }
     }
 }

@@ -6,11 +6,13 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 import com.sneaky.sneaky.repository.UsersRepository;
 import com.sneaky.sneaky.util.EmailNormalizer;
 
 @SpringBootApplication
+@EnableScheduling
 public class SneakyApplication implements CommandLineRunner {
 
 	private final UsersRepository usersRepository;

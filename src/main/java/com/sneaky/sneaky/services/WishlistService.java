@@ -121,6 +121,7 @@ public class WishlistService {
                     existingCart.setPrice(product.getPrice());
                     existingCart.setCurrency(product.getCurrency());
                     existingCart.setCreatedAt(LocalDateTime.now());
+                    existingCart.setReminderSentAt(null);
                     return existingCart;
                 })
                 .orElseGet(() -> Cart.builder()

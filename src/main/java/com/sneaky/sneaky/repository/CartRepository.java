@@ -1,5 +1,6 @@
 package com.sneaky.sneaky.repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,4 +28,15 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
     Optional<Cart> findByUserIdAndProductIdWithProductAndBrand(UUID userId, UUID productId);
 
     Optional<Cart> findByUserUserIdAndProductProductId(UUID userId, UUID productId);
+
+    @Query("""
+            SELECT c FROM Cart c
+            JOIN FETCH c.user
+            JOIN FETCH c.product p
+            LEFT JOIN FETCH p.brand
+            WHERE c.createdAt <= :cutoff
+              AND c.reminderSentAt IS NULL
+            ORDER BY c.createdAt ASC, c.cartId ASC
+            """)
+    List<Cart> findReminderCandidates(LocalDateTime cutoff);
 }
