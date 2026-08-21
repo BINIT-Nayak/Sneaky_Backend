@@ -22,9 +22,11 @@ import com.sneaky.sneaky.security.JwtUtil;
 import com.sneaky.sneaky.util.EmailNormalizer;
 
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class AuthService {
 
     private final UsersRepository userRepository;
@@ -89,7 +91,10 @@ public class AuthService {
             String newAccessToken = generateAccessToken(userId, user.getRole());
             return new RefreshResponseDTO(newAccessToken);
 
+        } catch (ResponseStatusException e) {
+            throw e;
         } catch (Exception e) {
+            log.warn("Refresh token validation failed", e);
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token");
         }
     }
@@ -123,7 +128,10 @@ public class AuthService {
 
             return new LogoutResponseDTO("Successfully logged out");
 
+        } catch (ResponseStatusException e) {
+            throw e;
         } catch (Exception e) {
+            log.warn("Logout refresh token validation failed", e);
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token");
         }
     }

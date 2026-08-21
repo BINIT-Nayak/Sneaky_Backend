@@ -28,9 +28,11 @@ import com.sneaky.sneaky.services.analytics.ProductAnalyticsService;
 import com.sneaky.sneaky.services.recommendation.MlRankingClient;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ProductRecommendationService {
     private static final double BRAND_MATCH_SCORE = 8.0;
     private static final double CATEGORY_MATCH_SCORE = 5.0;
@@ -78,6 +80,10 @@ public class ProductRecommendationService {
 
     private RecommendationResult getRecommendedProducts(UUID userId, Set<UUID> excludedProductIds) {
         if (!excludedProductIds.isEmpty()) {
+            log.info(
+                    "Recommendation cache bypassed because excluded product ids were provided. audience={}, excludedCount={}",
+                    audience(userId),
+                    excludedProductIds.size());
             return computeRecommendedProducts(userId, excludedProductIds);
         }
 
@@ -127,6 +133,7 @@ public class ProductRecommendationService {
             List<String> productIds = redisTemplate.opsForList().range(key, 0, RECOMMENDATION_RESULT_LIMIT - 1);
 
             if (productIds == null || productIds.isEmpty()) {
+                log.info("Recommendation Redis cache miss. key={}, audience={}", key, audience(userId));
                 return null;
             }
 
@@ -136,11 +143,22 @@ public class ProductRecommendationService {
             List<Products> products = productsByIdsPreservingOrder(parsedProductIds);
 
             if (products.isEmpty()) {
+                log.info(
+                        "Recommendation Redis cache ignored because cached product ids no longer resolve. key={}, cachedCount={}",
+                        key,
+                        productIds.size());
                 return null;
             }
 
+            log.info(
+                    "Recommendation Redis cache hit. key={}, audience={}, cachedCount={}, resolvedCount={}",
+                    key,
+                    audience(userId),
+                    productIds.size(),
+                    products.size());
             return new RecommendationResult(products, cachedPersonalized(key));
         } catch (RuntimeException e) {
+            log.warn("Recommendation Redis cache read failed. key={}, audience={}", key, audience(userId), e);
             return null;
         }
     }
@@ -170,8 +188,15 @@ public class ProductRecommendationService {
                     personalizedKey(key),
                     String.valueOf(recommendationResult.personalized()),
                     RECOMMENDATION_CACHE_TTL);
+            log.info(
+                    "Recommendation Redis cache written. key={}, audience={}, productCount={}, ttlSeconds={}, personalized={}",
+                    key,
+                    audience(userId),
+                    productIds.size(),
+                    RECOMMENDATION_CACHE_TTL.toSeconds(),
+                    recommendationResult.personalized());
         } catch (RuntimeException e) {
-            // Recommendations are cache-aside; Redis issues should not break product browsing.
+            log.warn("Recommendation Redis cache write failed. key={}, audience={}", key, audience(userId), e);
         }
     }
 
@@ -183,6 +208,10 @@ public class ProductRecommendationService {
 
     private static String personalizedKey(String recommendationsKey) {
         return recommendationsKey + PERSONALIZED_SUFFIX;
+    }
+
+    private static String audience(UUID userId) {
+        return userId == null ? "guest" : "user";
     }
 
     private static Set<UUID> normalizedExcludedProductIds(List<UUID> excludedProductIds) {
