@@ -75,6 +75,7 @@ public class AuthService {
 
             if (Boolean.TRUE
                     .equals(redisTemplate.hasKey(refreshTokenBlacklistKey(tokenId)))) {
+                log.info("Refresh token rejected because it is blacklisted");
                 throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token");
             }
 
@@ -82,11 +83,15 @@ public class AuthService {
             if (logoutTimestamp != null
                     && jwtUtil.extractIssuedAt(refreshToken).getTime() <= Long
                             .parseLong(logoutTimestamp)) {
+                log.info("Refresh token rejected because it was issued before the latest logout");
                 throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token");
             }
 
             Users user = userRepository.findById(userId)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+                    .orElseThrow(() -> {
+                        log.info("Refresh token rejected because the token user no longer exists");
+                        return new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found");
+                    });
 
             String newAccessToken = generateAccessToken(userId, user.getRole());
             return new RefreshResponseDTO(newAccessToken);
@@ -109,7 +114,10 @@ public class AuthService {
             String tokenId = jwtUtil.extractTokenId(refreshToken);
 
             userRepository.findById(userId)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+                    .orElseThrow(() -> {
+                        log.info("Logout rejected because the token user no longer exists");
+                        return new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found");
+                    });
 
             Date refreshTokenExpiry = jwtUtil.extractExpiration(refreshToken);
             long ttlMillis = refreshTokenExpiry.getTime() - System.currentTimeMillis();

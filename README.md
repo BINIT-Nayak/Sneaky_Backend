@@ -32,7 +32,6 @@ The backend handles:
 - 🗄️ PostgreSQL database support
 - 🚀 Redis caching integration
 - 🧠 Rule-based product recommendation model
-- 🧪 Product catalog seeding for recommendation testing
 - ❤️ Wishlist APIs, including clear-all and one-call move-to-cart support
 - 🛒 Cart APIs
 - 📈 Product analytics counters and recently viewed products
@@ -160,10 +159,6 @@ GET /api/products/recommended
 
 Recommendation details live in [docs/features/recommendations.md](docs/features/recommendations.md).
 
-## 🧪 Product Catalog Seeding
-
-`ProductCatalogSeeder` creates a larger product pool for local development and recommendation testing. See [docs/features/product-catalog-seeding.md](docs/features/product-catalog-seeding.md).
-
 ## 📈 Kafka Product Analytics
 
 Kafka analytics is opt-in and feeds Redis counters plus recommendation cache refreshes. See [docs/features/product-analytics.md](docs/features/product-analytics.md).
@@ -171,6 +166,20 @@ Kafka analytics is opt-in and feeds Redis counters plus recommendation cache ref
 ## 🛒 Merchant Checkout
 
 Sneaky does not process payments. Cart items include merchant metadata that the frontend uses for outbound partner checkout links. See [docs/features/commerce.md](docs/features/commerce.md).
+
+## 📦 Product Import
+
+Runtime product seeding has been removed. To populate a small database, use the admin API importer:
+
+```bash
+SNEAKY_API_BASE_URL=https://YOUR_BACKEND_DOMAIN \
+SNEAKY_ADMIN_EMAIL=admin@example.com \
+SNEAKY_ADMIN_PASSWORD=your_password \
+SNEAKY_TARGET_PRODUCT_COUNT=80 \
+node scripts/import-products-via-admin.mjs
+```
+
+The script logs in as an admin, creates missing brands, and adds products through `/api/admin/products`.
 
 ## ❤️ Wishlist API
 
@@ -183,7 +192,6 @@ Cart reminders create in-app notifications and optional email reminders for cart
 ## 📚 Feature Docs
 
 - [Recommendations](docs/features/recommendations.md)
-- [Product catalog seeding](docs/features/product-catalog-seeding.md)
 - [Product analytics](docs/features/product-analytics.md)
 - [Commerce APIs](docs/features/commerce.md)
 - [Cart reminders and notifications](docs/features/cart-reminders-and-notifications.md)
