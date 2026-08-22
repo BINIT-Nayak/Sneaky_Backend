@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -22,10 +23,15 @@ public interface WishListRepository extends JpaRepository<WishList, Long> {
 
     void deleteByUser(Users user);
 
+    long countByUser(Users user);
+
     List<WishList> findByUserOrderByCreatedAtDesc(Users user);
 
     @Query("SELECT w FROM WishList w JOIN FETCH w.product p LEFT JOIN FETCH p.brand WHERE w.user = :user ORDER BY w.createdAt DESC, w.wishlistId DESC")
     List<WishList> findByUserWithProductAndBrand(Users user);
+
+    @Query("SELECT w FROM WishList w JOIN FETCH w.product p LEFT JOIN FETCH p.brand WHERE w.user = :user ORDER BY w.createdAt DESC, w.wishlistId DESC")
+    List<WishList> findRecentByUserWithProductAndBrand(Users user, Pageable pageable);
 
     @Query("SELECT w FROM WishList w JOIN FETCH w.user JOIN FETCH w.product p LEFT JOIN FETCH p.brand WHERE w.user.userId = :userId AND p.productId = :productId")
     Optional<WishList> findByUserIdAndProductIdWithProductAndBrand(UUID userId, UUID productId);

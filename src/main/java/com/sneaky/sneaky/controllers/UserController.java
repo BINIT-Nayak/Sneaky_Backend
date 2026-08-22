@@ -77,6 +77,11 @@ public class UserController {
         return userService.getUserById(currentUser.getUserId());
     }
 
+    @GetMapping("/me/profile-summary")
+    public ProfileSummaryDTO getProfileSummary() {
+        return userService.getProfileSummary(currentUser.getUserId());
+    }
+
     @PutMapping("/me")
     public UserDTO updateCurrentUser(@Valid @RequestBody UpdateUserRequestDTO request) {
         return userService.updateUserById(currentUser.getUserId(), request);

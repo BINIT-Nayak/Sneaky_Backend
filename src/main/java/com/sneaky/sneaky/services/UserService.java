@@ -4,6 +4,7 @@ import java.util.List;
 import java.time.Duration;
 import java.util.UUID;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -11,8 +12,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.sneaky.sneaky.dto.user.*;
+import com.sneaky.sneaky.dto.wishlist.WishlistItemDTO;
+import com.sneaky.sneaky.entity.Products;
 import com.sneaky.sneaky.entity.Users;
+import com.sneaky.sneaky.entity.WishList;
+import com.sneaky.sneaky.repository.CartRepository;
 import com.sneaky.sneaky.repository.UsersRepository;
+import com.sneaky.sneaky.repository.WishListRepository;
 import com.sneaky.sneaky.util.EmailNormalizer;
 
 import lombok.AllArgsConstructor;
@@ -21,6 +27,8 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class UserService {
     private final UsersRepository userRepository;
+    private final CartRepository cartRepository;
+    private final WishListRepository wishListRepository;
     private final PasswordEncoder passwordEncoder;
     private final StringRedisTemplate redisTemplate;
 
@@ -66,6 +74,20 @@ public class UserService {
     public UserDTO getUserById(UUID userId) {
         Users user = getCurrentUser(userId);
         return toDTO(user);
+    }
+
+    public ProfileSummaryDTO getProfileSummary(UUID userId) {
+        Users user = getCurrentUser(userId);
+        List<WishlistItemDTO> recentWishlist = wishListRepository
+                .findRecentByUserWithProductAndBrand(user, PageRequest.of(0, 10))
+                .stream()
+                .map(this::toWishlistItemDTO)
+                .toList();
+
+        return new ProfileSummaryDTO(
+                wishListRepository.countByUser(user),
+                cartRepository.sumQuantityByUser(user),
+                recentWishlist);
     }
 
     public UserDTO updateUserById(UUID userId, UpdateUserRequestDTO request) {
@@ -124,5 +146,21 @@ public class UserService {
 
         Users user = getCurrentUser(userId);
         userRepository.delete(user);
+    }
+
+    private WishlistItemDTO toWishlistItemDTO(WishList wishlist) {
+        Products product = wishlist.getProduct();
+        String brandName = product.getBrand() == null ? "" : product.getBrand().getName();
+
+        return new WishlistItemDTO(
+                product.getProductId(),
+                product.getName(),
+                product.getPrice(),
+                product.getImageUrl(),
+                brandName,
+                product.getCategory(),
+                ProductService.resolveSizes(product.getSizes()),
+                ProductService.toColorDtos(product.getColors()),
+                ProductService.resolveStockStatus(product.getStockStatus()));
     }
 }

@@ -21,6 +21,9 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
 
     void deleteByUser(Users user);
 
+    @Query("SELECT COALESCE(SUM(c.quantity), 0) FROM Cart c WHERE c.user = :user")
+    long sumQuantityByUser(Users user);
+
     @Query("SELECT c FROM Cart c JOIN FETCH c.product p LEFT JOIN FETCH p.brand WHERE c.user = :user ORDER BY c.createdAt DESC, c.cartId DESC")
     List<Cart> findByUserWithProductAndBrand(Users user);
 
