@@ -80,6 +80,17 @@ public class ProductRecommendationCache {
         }
     }
 
+    public void invalidate(UUID userId) {
+        String key = recommendationsKey(userId);
+
+        try {
+            redisTemplate.delete(List.of(key, personalizedKey(key)));
+            log.info("Recommendation Redis cache invalidated. key={}, audience={}", key, audience(userId));
+        } catch (RuntimeException e) {
+            log.warn("Recommendation Redis cache invalidation failed. key={}, audience={}", key, audience(userId), e);
+        }
+    }
+
     static String recommendationsKey(UUID userId) {
         return userId == null
                 ? GUEST_RECOMMENDATIONS_KEY

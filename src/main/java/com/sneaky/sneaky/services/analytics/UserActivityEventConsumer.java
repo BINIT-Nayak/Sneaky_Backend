@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 import com.sneaky.sneaky.dto.analytics.UserActivityEventDTO;
 import com.sneaky.sneaky.services.ProductRecommendationService;
+import com.sneaky.sneaky.services.recommendation.ProductRecommendationCache;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,13 +18,23 @@ import lombok.extern.slf4j.Slf4j;
 public class UserActivityEventConsumer {
     private final ProductAnalyticsService productAnalyticsService;
     private final UserPreferenceProfileService userPreferenceProfileService;
+    private final ProductRecommendationCache recommendationCache;
     private final ProductRecommendationService productRecommendationService;
 
     @KafkaListener(topics = "${app.kafka.topics.user-activity}")
     public void consume(UserActivityEventDTO event) {
         userPreferenceProfileService.applyEvent(event);
         productAnalyticsService.record(event);
+        invalidateUserRecommendations(event);
         refreshUserRecommendations(event);
+    }
+
+    private void invalidateUserRecommendations(UserActivityEventDTO event) {
+        if (event == null || event.getUserId() == null) {
+            return;
+        }
+
+        recommendationCache.invalidate(event.getUserId());
     }
 
     private void refreshUserRecommendations(UserActivityEventDTO event) {

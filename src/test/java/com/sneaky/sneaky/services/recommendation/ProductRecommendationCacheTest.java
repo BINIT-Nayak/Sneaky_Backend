@@ -78,4 +78,14 @@ class ProductRecommendationCacheTest {
         verify(listOperations).rightPushAll("recommendations:guest", List.of(productId.toString()));
         verify(valueOperations).set("recommendations:guest:personalized", "false", Duration.ofMinutes(15));
     }
+
+    @Test
+    void invalidateDeletesRecommendationAndPersonalizedKeys() {
+        UUID userId = UUID.randomUUID();
+
+        cache.invalidate(userId);
+
+        String key = "recommendations:user:" + userId;
+        verify(redisTemplate).delete(List.of(key, key + ":personalized"));
+    }
 }
