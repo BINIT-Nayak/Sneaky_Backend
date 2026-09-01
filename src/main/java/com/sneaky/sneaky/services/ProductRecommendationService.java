@@ -1,17 +1,16 @@
 package com.sneaky.sneaky.services;
 
 import java.math.BigDecimal;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,7 +24,10 @@ import com.sneaky.sneaky.repository.ProductsRepository;
 import com.sneaky.sneaky.repository.UsersRepository;
 import com.sneaky.sneaky.repository.WishListRepository;
 import com.sneaky.sneaky.services.analytics.ProductAnalyticsService;
+import com.sneaky.sneaky.services.analytics.UserPreferenceProfile;
+import com.sneaky.sneaky.services.analytics.UserPreferenceProfileService;
 import com.sneaky.sneaky.services.recommendation.MlRankingClient;
+import com.sneaky.sneaky.services.recommendation.ProductRecommendationCache;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +40,8 @@ public class ProductRecommendationService {
     private static final double CATEGORY_MATCH_SCORE = 5.0;
     private static final double MERCHANT_MATCH_SCORE = 4.0;
     private static final double PRICE_MATCH_SCORE = 3.0;
+    private static final double PROFILE_BRAND_SCORE_SCALE = 18.0;
+    private static final double PROFILE_CATEGORY_SCORE_SCALE = 14.0;
     private static final double POPULARITY_SCORE = 2.0;
     private static final double PASSED_BRAND_PENALTY = 6.0;
     private static final double PASSED_CATEGORY_PENALTY = 10.0;
@@ -55,17 +59,15 @@ public class ProductRecommendationService {
     private static final int RECOMMENDATION_CANDIDATE_LIMIT = 250;
     private static final int RECOMMENDATION_RESULT_LIMIT = 30;
     private static final int MIN_PERSONALIZATION_SIGNALS = 20;
-    private static final Duration RECOMMENDATION_CACHE_TTL = Duration.ofMinutes(15);
     private static final String APPROVED_STATUS = "APPROVED";
-    private static final String GUEST_RECOMMENDATIONS_KEY = "recommendations:guest";
-    private static final String PERSONALIZED_SUFFIX = ":personalized";
 
     private final ProductsRepository productsRepository;
     private final UsersRepository usersRepository;
     private final WishListRepository wishListRepository;
     private final CartRepository cartRepository;
     private final ProductAnalyticsService productAnalyticsService;
-    private final StringRedisTemplate redisTemplate;
+    private final UserPreferenceProfileService userPreferenceProfileService;
+    private final ProductRecommendationCache recommendationCache;
     private final MlRankingClient mlRankingClient;
 
     @Transactional(readOnly = true)
@@ -93,14 +95,14 @@ public class ProductRecommendationService {
         }
 
         RecommendationResult recommendationResult = computeRecommendedProducts(userId, excludedProductIds);
-        cacheRecommendations(userId, recommendationResult);
+        putCachedRecommendations(userId, recommendationResult);
         return recommendationResult;
     }
 
     @Transactional(readOnly = true)
     public RecommendationResult refreshRecommendedProducts(UUID userId) {
         RecommendationResult recommendationResult = computeRecommendedProducts(userId, Set.of());
-        cacheRecommendations(userId, recommendationResult);
+        putCachedRecommendations(userId, recommendationResult);
         return recommendationResult;
     }
 
@@ -127,87 +129,33 @@ public class ProductRecommendationService {
     }
 
     private RecommendationResult cachedRecommendations(UUID userId) {
-        String key = recommendationsKey(userId);
+        Optional<ProductRecommendationCache.CachedRecommendationIds> cached =
+                recommendationCache.get(userId, RECOMMENDATION_RESULT_LIMIT);
 
-        try {
-            List<String> productIds = redisTemplate.opsForList().range(key, 0, RECOMMENDATION_RESULT_LIMIT - 1);
-
-            if (productIds == null || productIds.isEmpty()) {
-                log.info("Recommendation Redis cache miss. key={}, audience={}", key, audience(userId));
-                return null;
-            }
-
-            List<UUID> parsedProductIds = productIds.stream()
-                    .map(UUID::fromString)
-                    .toList();
-            List<Products> products = productsByIdsPreservingOrder(parsedProductIds);
-
-            if (products.isEmpty()) {
-                log.info(
-                        "Recommendation Redis cache ignored because cached product ids no longer resolve. key={}, cachedCount={}",
-                        key,
-                        productIds.size());
-                return null;
-            }
-
-            log.info(
-                    "Recommendation Redis cache hit. key={}, audience={}, cachedCount={}, resolvedCount={}",
-                    key,
-                    audience(userId),
-                    productIds.size(),
-                    products.size());
-            return new RecommendationResult(products, cachedPersonalized(key));
-        } catch (RuntimeException e) {
-            log.warn("Recommendation Redis cache read failed. key={}, audience={}", key, audience(userId), e);
+        if (cached.isEmpty()) {
             return null;
         }
-    }
 
-    private boolean cachedPersonalized(String key) {
-        String personalized = redisTemplate.opsForValue().get(personalizedKey(key));
-        return Boolean.parseBoolean(personalized);
-    }
+        List<Products> products = productsByIdsPreservingOrder(cached.get().productIds());
 
-    private void cacheRecommendations(UUID userId, RecommendationResult recommendationResult) {
-        String key = recommendationsKey(userId);
-
-        try {
-            redisTemplate.delete(key);
-
-            List<String> productIds = recommendationResult.products()
-                    .stream()
-                    .map(product -> product.getProductId().toString())
-                    .toList();
-
-            if (!productIds.isEmpty()) {
-                redisTemplate.opsForList().rightPushAll(key, productIds);
-            }
-
-            redisTemplate.expire(key, RECOMMENDATION_CACHE_TTL);
-            redisTemplate.opsForValue().set(
-                    personalizedKey(key),
-                    String.valueOf(recommendationResult.personalized()),
-                    RECOMMENDATION_CACHE_TTL);
+        if (products.isEmpty()) {
             log.info(
-                    "Recommendation Redis cache written. key={}, audience={}, productCount={}, ttlSeconds={}, personalized={}",
-                    key,
+                    "Recommendation Redis cache ignored because cached product ids no longer resolve. audience={}, cachedCount={}",
                     audience(userId),
-                    productIds.size(),
-                    RECOMMENDATION_CACHE_TTL.toSeconds(),
-                    recommendationResult.personalized());
-        } catch (RuntimeException e) {
-            log.warn("Recommendation Redis cache write failed. key={}, audience={}", key, audience(userId), e);
+                    cached.get().productIds().size());
+            return null;
         }
+
+        return new RecommendationResult(products, cached.get().personalized());
     }
 
-    private String recommendationsKey(UUID userId) {
-        return userId == null
-                ? GUEST_RECOMMENDATIONS_KEY
-                : "recommendations:user:" + userId;
-    }
+    private void putCachedRecommendations(UUID userId, RecommendationResult recommendationResult) {
+        List<UUID> productIds = recommendationResult.products()
+                .stream()
+                .map(Products::getProductId)
+                .toList();
 
-    private static String personalizedKey(String recommendationsKey) {
-        return recommendationsKey + PERSONALIZED_SUFFIX;
+        recommendationCache.put(userId, productIds, recommendationResult.personalized());
     }
 
     private static String audience(UUID userId) {
@@ -233,16 +181,15 @@ public class ProductRecommendationService {
                 .toList();
         List<Products> recentlyViewedProducts = recentlyViewedProducts(user);
         List<Products> passedProducts = passedProducts(user);
-        List<Products> signalProducts = new ArrayList<>();
-        signalProducts.addAll(wishlistProducts);
-        signalProducts.addAll(cartProducts);
-        signalProducts.addAll(recentlyViewedProducts);
+        UserPreferenceProfile loadedProfile = userPreferenceProfileService.getProfile(user.getUserId());
+        UserPreferenceProfile profile = loadedProfile == null ? UserPreferenceProfile.empty() : loadedProfile;
 
         Set<UUID> preferenceSignalIds = productIds(wishlistProducts);
         preferenceSignalIds.addAll(productIds(cartProducts));
         preferenceSignalIds.addAll(productIds(passedProducts));
+        int profileSignalCount = Math.toIntExact(Math.min(Integer.MAX_VALUE, profile.totalInteractions()));
 
-        if (preferenceSignalIds.size() < MIN_PERSONALIZATION_SIGNALS) {
+        if (profileSignalCount < MIN_PERSONALIZATION_SIGNALS && preferenceSignalIds.size() < MIN_PERSONALIZATION_SIGNALS) {
             return new RecommendationResult(rankForGuest(activeProducts, popularityRanks), false);
         }
 
@@ -254,7 +201,7 @@ public class ProductRecommendationService {
         List<ScoredProduct> scoredProducts = activeProducts.stream()
                 .map(product -> scoredProductForUser(
                         product,
-                        signalProducts,
+                        profile,
                         passedProducts,
                         ownedProductIds,
                         recentlyViewedProductIds,
@@ -342,7 +289,7 @@ public class ProductRecommendationService {
 
     private ScoredProduct scoredProductForUser(
             Products product,
-            List<Products> signalProducts,
+            UserPreferenceProfile profile,
             List<Products> passedProducts,
             Set<UUID> ownedProductIds,
             Set<UUID> recentlyViewedProductIds,
@@ -357,26 +304,21 @@ public class ProductRecommendationService {
         int passedCategoryMatches = 0;
         int passedMerchantMatches = 0;
 
-        for (Products signalProduct : signalProducts) {
-            if (sameBrand(product, signalProduct)) {
-                brandMatches += 1;
-                score += BRAND_MATCH_SCORE;
-            }
+        Double brandPreferenceScore = brandPreferenceScore(profile, product);
+        if (brandPreferenceScore != null) {
+            brandMatches = brandPreferenceScore > 0 ? 1 : 0;
+            score += brandPreferenceScore * PROFILE_BRAND_SCORE_SCALE;
+        }
 
-            if (sameCategory(product, signalProduct)) {
-                categoryMatches += 1;
-                score += CATEGORY_MATCH_SCORE;
-            }
+        Double categoryPreferenceScore = categoryPreferenceScore(profile, product);
+        if (categoryPreferenceScore != null) {
+            categoryMatches = categoryPreferenceScore > 0 ? 1 : 0;
+            score += categoryPreferenceScore * PROFILE_CATEGORY_SCORE_SCALE;
+        }
 
-            if (similarPrice(product, signalProduct)) {
-                priceMatches += 1;
-                score += PRICE_MATCH_SCORE;
-            }
-
-            if (sameMerchant(product, signalProduct)) {
-                merchantMatches += 1;
-                score += MERCHANT_MATCH_SCORE;
-            }
+        if (preferredPriceMatch(profile, product)) {
+            priceMatches = 1;
+            score += PRICE_MATCH_SCORE;
         }
 
         for (Products passedProduct : passedProducts) {
@@ -551,6 +493,38 @@ public class ProductRecommendationService {
         return category != null
                 && signalCategory != null
                 && category.equalsIgnoreCase(signalCategory);
+    }
+
+    private static Double brandPreferenceScore(UserPreferenceProfile profile, Products product) {
+        Brands brand = product.getBrand();
+
+        if (profile == null || brand == null || brand.getId() == null) {
+            return null;
+        }
+
+        return profile.brandScores().get(brand.getId().toString());
+    }
+
+    private static Double categoryPreferenceScore(UserPreferenceProfile profile, Products product) {
+        String category = product.getCategory();
+
+        if (profile == null || category == null || category.isBlank()) {
+            return null;
+        }
+
+        return profile.categoryScores().get(category.trim().toLowerCase(java.util.Locale.ROOT));
+    }
+
+    private static boolean preferredPriceMatch(UserPreferenceProfile profile, Products product) {
+        if (profile == null
+                || profile.preferredPriceMin() == null
+                || profile.preferredPriceMax() == null
+                || product.getPrice() == null) {
+            return false;
+        }
+
+        return product.getPrice().compareTo(profile.preferredPriceMin()) >= 0
+                && product.getPrice().compareTo(profile.preferredPriceMax()) <= 0;
     }
 
     private static boolean sameMerchant(Products product, Products signalProduct) {

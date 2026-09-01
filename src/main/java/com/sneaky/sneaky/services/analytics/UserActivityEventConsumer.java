@@ -16,10 +16,12 @@ import lombok.extern.slf4j.Slf4j;
 @ConditionalOnProperty(name = "app.kafka.enabled", havingValue = "true")
 public class UserActivityEventConsumer {
     private final ProductAnalyticsService productAnalyticsService;
+    private final UserPreferenceProfileService userPreferenceProfileService;
     private final ProductRecommendationService productRecommendationService;
 
     @KafkaListener(topics = "${app.kafka.topics.user-activity}")
     public void consume(UserActivityEventDTO event) {
+        userPreferenceProfileService.applyEvent(event);
         productAnalyticsService.record(event);
         refreshUserRecommendations(event);
     }

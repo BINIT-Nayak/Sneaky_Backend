@@ -13,10 +13,15 @@ import com.sneaky.sneaky.services.ProductRecommendationService;
 class UserActivityEventConsumerTest {
 
     private final ProductAnalyticsService productAnalyticsService = org.mockito.Mockito.mock(ProductAnalyticsService.class);
+    private final UserPreferenceProfileService userPreferenceProfileService =
+            org.mockito.Mockito.mock(UserPreferenceProfileService.class);
     private final ProductRecommendationService productRecommendationService =
             org.mockito.Mockito.mock(ProductRecommendationService.class);
     private final UserActivityEventConsumer consumer =
-            new UserActivityEventConsumer(productAnalyticsService, productRecommendationService);
+            new UserActivityEventConsumer(
+                    productAnalyticsService,
+                    userPreferenceProfileService,
+                    productRecommendationService);
 
     @Test
     void consumeRecordsAnalyticsAndRefreshesUserRecommendations() {
@@ -29,6 +34,7 @@ class UserActivityEventConsumerTest {
 
         consumer.consume(event);
 
+        verify(userPreferenceProfileService).applyEvent(event);
         verify(productAnalyticsService).record(event);
         verify(productRecommendationService).refreshRecommendedProducts(userId);
     }

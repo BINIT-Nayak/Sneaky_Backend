@@ -2,7 +2,9 @@ package com.sneaky.sneaky.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -13,11 +15,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.data.redis.core.ListOperations;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -31,7 +31,10 @@ import com.sneaky.sneaky.repository.ProductsRepository;
 import com.sneaky.sneaky.repository.UsersRepository;
 import com.sneaky.sneaky.repository.WishListRepository;
 import com.sneaky.sneaky.services.analytics.ProductAnalyticsService;
+import com.sneaky.sneaky.services.analytics.UserPreferenceProfile;
+import com.sneaky.sneaky.services.analytics.UserPreferenceProfileService;
 import com.sneaky.sneaky.services.recommendation.MlRankingClient;
+import com.sneaky.sneaky.services.recommendation.ProductRecommendationCache;
 
 @ExtendWith(MockitoExtension.class)
 class ProductRecommendationServiceTest {
@@ -52,30 +55,31 @@ class ProductRecommendationServiceTest {
     private ProductAnalyticsService productAnalyticsService;
 
     @Mock
-    private StringRedisTemplate redisTemplate;
+    private UserPreferenceProfileService userPreferenceProfileService;
 
     @Mock
     private MlRankingClient mlRankingClient;
 
     @Mock
-    private ListOperations<String, String> listOperations;
-
-    @Mock
-    private ValueOperations<String, String> valueOperations;
+    private ProductRecommendationCache recommendationCache;
 
     @InjectMocks
     private ProductRecommendationService recommendationService;
+
+    @BeforeEach
+    void setUp() {
+        lenient().when(recommendationCache.get(any(), anyInt())).thenReturn(Optional.empty());
+    }
 
     @Test
     void recommendationsUseCachedProductIdsWhenAvailable() {
         UUID userId = UUID.randomUUID();
         Products cachedProduct = product("Cached Pair", "Nike", "Running", BigDecimal.valueOf(12000), 1);
 
-        when(redisTemplate.opsForList()).thenReturn(listOperations);
-        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-        when(listOperations.range("recommendations:user:" + userId, 0, 29))
-                .thenReturn(List.of(cachedProduct.getProductId().toString()));
-        when(valueOperations.get("recommendations:user:" + userId + ":personalized")).thenReturn("true");
+        when(recommendationCache.get(userId, 30))
+                .thenReturn(Optional.of(new ProductRecommendationCache.CachedRecommendationIds(
+                        List.of(cachedProduct.getProductId()),
+                        true)));
         when(productsRepository.findByProductIdIn(List.of(cachedProduct.getProductId())))
                 .thenReturn(List.of(cachedProduct));
 
@@ -139,6 +143,7 @@ class ProductRecommendationServiceTest {
         when(cartRepository.findByUserWithProductAndBrand(user)).thenReturn(List.of());
         when(productAnalyticsService.getRecentlyViewedProductIds(user.getUserId())).thenReturn(List.of());
         when(productAnalyticsService.getPassedProductIds(user.getUserId())).thenReturn(List.of());
+        when(userPreferenceProfileService.getProfile(user.getUserId())).thenReturn(UserPreferenceProfile.empty());
 
         ProductRecommendationService.RecommendationResult result =
                 recommendationService.getRecommendedProducts(user.getUserId());
@@ -169,6 +174,9 @@ class ProductRecommendationServiceTest {
                 .thenReturn(wishlistSignals(user, wishlist, 19));
         when(cartRepository.findByUserWithProductAndBrand(user)).thenReturn(List.of());
         when(productAnalyticsService.getRecentlyViewedProductIds(user.getUserId())).thenReturn(List.of());
+        when(productAnalyticsService.getPassedProductIds(user.getUserId())).thenReturn(List.of());
+        when(userPreferenceProfileService.getProfile(user.getUserId()))
+                .thenReturn(profileFor(wishlistProduct, 20, 1.0, 1.0));
 
         ProductRecommendationService.RecommendationResult result =
                 recommendationService.getRecommendedProducts(user.getUserId());
@@ -198,6 +206,8 @@ class ProductRecommendationServiceTest {
         when(productAnalyticsService.getPassedProductIds(user.getUserId())).thenReturn(passedProductIds);
         when(productsRepository.findByProductIdIn(passedProductIds))
                 .thenReturn(passedProducts);
+        when(userPreferenceProfileService.getProfile(user.getUserId()))
+                .thenReturn(profileFor(passedRunner, 20, -1.0, -1.0));
 
         ProductRecommendationService.RecommendationResult result =
                 recommendationService.getRecommendedProducts(user.getUserId());
@@ -231,6 +241,13 @@ class ProductRecommendationServiceTest {
         when(cartRepository.findByUserWithProductAndBrand(user)).thenReturn(List.of());
         when(productAnalyticsService.getRecentlyViewedProductIds(user.getUserId())).thenReturn(List.of());
         when(productAnalyticsService.getPassedProductIds(user.getUserId())).thenReturn(List.of());
+        when(userPreferenceProfileService.getProfile(user.getUserId()))
+                .thenReturn(new UserPreferenceProfile(
+                        java.util.Map.of(),
+                        java.util.Map.of("lifestyle", 1.0),
+                        null,
+                        null,
+                        20));
 
         ProductRecommendationService.RecommendationResult result =
                 recommendationService.getRecommendedProducts(user.getUserId());
@@ -257,6 +274,8 @@ class ProductRecommendationServiceTest {
         when(cartRepository.findByUserWithProductAndBrand(user)).thenReturn(List.of());
         when(productAnalyticsService.getRecentlyViewedProductIds(user.getUserId())).thenReturn(List.of());
         when(productAnalyticsService.getPassedProductIds(user.getUserId())).thenReturn(List.of());
+        when(userPreferenceProfileService.getProfile(user.getUserId()))
+                .thenReturn(profileFor(wishlistProduct, 20, 1.0, 1.0));
         when(mlRankingClient.rank(any(), any())).thenReturn(Optional.of(List.of(
                 new MlRankingClient.RankedCandidate(mlFavorite.getProductId(), 0.95),
                 new MlRankingClient.RankedCandidate(ruleFavorite.getProductId(), 0.60),
@@ -355,6 +374,23 @@ class ProductRecommendationServiceTest {
         }
 
         return products;
+    }
+
+    private static UserPreferenceProfile profileFor(
+            Products product,
+            long totalInteractions,
+            double brandScore,
+            double categoryScore) {
+        String brandId = product.getBrand().getId().toString();
+        String category = product.getCategory().trim().toLowerCase(java.util.Locale.ROOT);
+        BigDecimal price = product.getPrice();
+
+        return new UserPreferenceProfile(
+                java.util.Map.of(brandId, brandScore),
+                java.util.Map.of(category, categoryScore),
+                price.subtract(BigDecimal.valueOf(1000)),
+                price.add(BigDecimal.valueOf(3000)),
+                totalInteractions);
     }
 
     private static Products product(String name, String brandName, String category, BigDecimal price, int ageInDays) {
