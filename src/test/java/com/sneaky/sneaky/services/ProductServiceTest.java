@@ -169,7 +169,12 @@ class ProductServiceTest {
 
         productService.recordProductPass(productId, userId);
 
-        verify(activityEventFactory).create(UserActivityEventType.PRODUCT_PASSED, userId, productId, null);
+        verify(activityEventFactory).create(
+                org.mockito.Mockito.eq(UserActivityEventType.SKIP),
+                org.mockito.Mockito.eq(userId),
+                org.mockito.Mockito.eq(productId),
+                org.mockito.Mockito.isNull(),
+                org.mockito.Mockito.anyMap());
         verify(activityEventPublisher).publish(any());
     }
 

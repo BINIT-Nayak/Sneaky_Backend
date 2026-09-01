@@ -22,7 +22,7 @@ class UserActivityEventConsumerTest {
     void consumeRecordsAnalyticsAndRefreshesUserRecommendations() {
         UUID userId = UUID.randomUUID();
         UserActivityEventDTO event = UserActivityEventDTO.builder()
-                .eventType(UserActivityEventType.PRODUCT_PASSED)
+                .eventType(UserActivityEventType.SKIP)
                 .userId(userId)
                 .productId(UUID.randomUUID())
                 .build();

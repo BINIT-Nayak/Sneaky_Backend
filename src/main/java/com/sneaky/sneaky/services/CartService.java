@@ -3,6 +3,7 @@ package com.sneaky.sneaky.services;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -62,7 +63,7 @@ public class CartService {
                         .build());
 
         Cart saved = cartRepository.save(cart);
-        publishCartEvent(UserActivityEventType.CART_ADDED, userId, productId, quantity);
+        publishCartEvent(UserActivityEventType.CART, userId, productId, quantity, Map.of("action", "ADD"));
         return toDto(saved);
     }
 
@@ -87,7 +88,7 @@ public class CartService {
 
         cart.setQuantity(quantity);
         Cart saved = cartRepository.save(cart);
-        publishCartEvent(UserActivityEventType.CART_QUANTITY_UPDATED, userId, productId, quantity);
+        publishCartEvent(UserActivityEventType.CART, userId, productId, quantity, Map.of("action", "UPDATE_QUANTITY"));
         return toDto(saved);
     }
 
@@ -100,7 +101,7 @@ public class CartService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         cartRepository.delete(cart);
-        publishCartEvent(UserActivityEventType.CART_REMOVED, userId, productId, null);
+        publishCartEvent(UserActivityEventType.CART, userId, productId, null, Map.of("action", "REMOVE"));
     }
 
     @Transactional
@@ -123,8 +124,8 @@ public class CartService {
 
         WishList savedWishlist = wishListRepository.save(wishlist);
         cartRepository.delete(cart);
-        publishWishlistEvent(UserActivityEventType.WISHLIST_ADDED, userId, productId);
-        publishCartEvent(UserActivityEventType.CART_REMOVED, userId, productId, null);
+        publishWishlistEvent(UserActivityEventType.WISHLIST, userId, productId, Map.of("action", "ADD", "source", "CART"));
+        publishCartEvent(UserActivityEventType.CART, userId, productId, null, Map.of("action", "REMOVE"));
 
         return toWishlistDto(savedWishlist);
     }
@@ -197,10 +198,27 @@ public class CartService {
     }
 
     private void publishCartEvent(UserActivityEventType eventType, UUID userId, UUID productId, Integer quantity) {
-        activityEventPublisher.publish(activityEventFactory.create(eventType, userId, productId, quantity));
+        publishCartEvent(eventType, userId, productId, quantity, Map.of());
+    }
+
+    private void publishCartEvent(
+            UserActivityEventType eventType,
+            UUID userId,
+            UUID productId,
+            Integer quantity,
+            Map<String, Object> metadata) {
+        activityEventPublisher.publish(activityEventFactory.create(eventType, userId, productId, quantity, metadata));
     }
 
     private void publishWishlistEvent(UserActivityEventType eventType, UUID userId, UUID productId) {
-        activityEventPublisher.publish(activityEventFactory.create(eventType, userId, productId, null));
+        publishWishlistEvent(eventType, userId, productId, Map.of());
+    }
+
+    private void publishWishlistEvent(
+            UserActivityEventType eventType,
+            UUID userId,
+            UUID productId,
+            Map<String, Object> metadata) {
+        activityEventPublisher.publish(activityEventFactory.create(eventType, userId, productId, null, metadata));
     }
 }

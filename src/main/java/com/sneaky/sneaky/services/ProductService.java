@@ -2,6 +2,7 @@ package com.sneaky.sneaky.services;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -73,14 +74,24 @@ public class ProductService {
     @Transactional(readOnly = true)
     public ProductDTO getProductById(UUID id, UUID viewerUserId) {
         Products product = getPublicProductEntity(id);
-        publishProductEvent(UserActivityEventType.PRODUCT_VIEWED, viewerUserId, id, null);
+        publishProductEvent(
+                UserActivityEventType.VIEW,
+                viewerUserId,
+                id,
+                null,
+                Map.of("source", "PRODUCT_DETAILS"));
         return toDTO(product);
     }
 
     @Transactional(readOnly = true)
     public void recordProductPass(UUID id, UUID viewerUserId) {
         getProductEntity(id);
-        publishProductEvent(UserActivityEventType.PRODUCT_PASSED, viewerUserId, id, null);
+        publishProductEvent(
+                UserActivityEventType.SKIP,
+                viewerUserId,
+                id,
+                null,
+                Map.of("source", "DISCOVERY_FEED"));
     }
 
     @Transactional(readOnly = true)
@@ -284,6 +295,15 @@ public class ProductService {
             UUID userId,
             UUID productId,
             Integer quantity) {
-        activityEventPublisher.publish(activityEventFactory.create(eventType, userId, productId, quantity));
+        publishProductEvent(eventType, userId, productId, quantity, Map.of());
+    }
+
+    private void publishProductEvent(
+            UserActivityEventType eventType,
+            UUID userId,
+            UUID productId,
+            Integer quantity,
+            Map<String, Object> metadata) {
+        activityEventPublisher.publish(activityEventFactory.create(eventType, userId, productId, quantity, metadata));
     }
 }

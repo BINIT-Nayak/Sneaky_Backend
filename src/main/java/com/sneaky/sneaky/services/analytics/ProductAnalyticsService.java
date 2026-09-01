@@ -27,25 +27,25 @@ public class ProductAnalyticsService {
 
         UUID productId = event.getProductId();
 
-        if (event.getEventType() == UserActivityEventType.PRODUCT_VIEWED) {
+        if (event.getEventType() == UserActivityEventType.VIEW) {
             redisTemplate.opsForValue().increment(productMetricKey(productId, "views"));
             redisTemplate.opsForZSet().incrementScore("analytics:products:most-viewed", productId.toString(), 1);
             recordRecentlyViewed(event);
             return;
         }
 
-        if (event.getEventType() == UserActivityEventType.PRODUCT_PASSED) {
+        if (event.getEventType() == UserActivityEventType.SKIP) {
             redisTemplate.opsForValue().increment(productMetricKey(productId, "passes"));
             recordPassedProduct(event);
             return;
         }
 
-        if (event.getEventType() == UserActivityEventType.CART_ADDED) {
+        if (event.getEventType() == UserActivityEventType.CART && isAddAction(event)) {
             redisTemplate.opsForValue().increment(productMetricKey(productId, "cart-adds"));
             return;
         }
 
-        if (event.getEventType() == UserActivityEventType.WISHLIST_ADDED) {
+        if (event.getEventType() == UserActivityEventType.WISHLIST && isAddAction(event)) {
             redisTemplate.opsForValue().increment(productMetricKey(productId, "wishlist-adds"));
         }
     }
@@ -125,6 +125,14 @@ public class ProductAnalyticsService {
     private long readLong(String key) {
         String value = redisTemplate.opsForValue().get(key);
         return value == null ? 0 : Long.parseLong(value);
+    }
+
+    private static boolean isAddAction(UserActivityEventDTO event) {
+        if (event.getMetadata() == null || !event.getMetadata().containsKey("action")) {
+            return true;
+        }
+
+        return "ADD".equals(event.getMetadata().get("action"));
     }
 
     private static String productMetricKey(UUID productId, String metric) {
