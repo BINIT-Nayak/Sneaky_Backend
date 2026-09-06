@@ -37,15 +37,18 @@ public class AuthController {
     private final AuthService authService;
     private final boolean refreshCookieSecure;
     private final String refreshCookieSameSite;
+    private final String refreshCookieDomain;
 
     @Autowired
     public AuthController(
             AuthService authService,
             @Value("${app.auth.refresh-cookie.secure:false}") boolean refreshCookieSecure,
-            @Value("${app.auth.refresh-cookie.same-site:Lax}") String refreshCookieSameSite) {
+            @Value("${app.auth.refresh-cookie.same-site:Lax}") String refreshCookieSameSite,
+            @Value("${app.auth.refresh-cookie.domain:}") String refreshCookieDomain) {
         this.authService = authService;
         this.refreshCookieSecure = refreshCookieSecure;
         this.refreshCookieSameSite = refreshCookieSameSite;
+        this.refreshCookieDomain = refreshCookieDomain == null ? "" : refreshCookieDomain.trim();
     }
 
     @PostMapping("/login")
@@ -90,22 +93,32 @@ public class AuthController {
     }
 
     private ResponseCookie refreshCookie(String refreshToken) {
-        return ResponseCookie.from(REFRESH_COOKIE_NAME, refreshToken)
+        ResponseCookie.ResponseCookieBuilder cookieBuilder = ResponseCookie.from(REFRESH_COOKIE_NAME, refreshToken)
                 .httpOnly(true)
                 .secure(refreshCookieSecure)
                 .sameSite(refreshCookieSameSite)
                 .path("/api/auth")
-                .maxAge(REFRESH_COOKIE_MAX_AGE)
-                .build();
+                .maxAge(REFRESH_COOKIE_MAX_AGE);
+
+        if (!refreshCookieDomain.isBlank()) {
+            cookieBuilder.domain(refreshCookieDomain);
+        }
+
+        return cookieBuilder.build();
     }
 
     private ResponseCookie expiredRefreshCookie() {
-        return ResponseCookie.from(REFRESH_COOKIE_NAME, "")
+        ResponseCookie.ResponseCookieBuilder cookieBuilder = ResponseCookie.from(REFRESH_COOKIE_NAME, "")
                 .httpOnly(true)
                 .secure(refreshCookieSecure)
                 .sameSite(refreshCookieSameSite)
                 .path("/api/auth")
-                .maxAge(Duration.ZERO)
-                .build();
+                .maxAge(Duration.ZERO);
+
+        if (!refreshCookieDomain.isBlank()) {
+            cookieBuilder.domain(refreshCookieDomain);
+        }
+
+        return cookieBuilder.build();
     }
 }

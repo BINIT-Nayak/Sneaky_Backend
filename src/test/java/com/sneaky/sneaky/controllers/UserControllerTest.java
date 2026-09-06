@@ -46,7 +46,7 @@ class UserControllerTest {
                 LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
                 validator.afterPropertiesSet();
                 mockMvc = MockMvcBuilders.standaloneSetup(
-                                new UserController(userService, authService, currentUser, false, "Lax"))
+                                new UserController(userService, authService, currentUser, false, "Lax", ""))
                                 .setValidator(validator)
                                 .build();
         }

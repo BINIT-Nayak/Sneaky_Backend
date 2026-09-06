@@ -36,7 +36,7 @@ class AuthControllerTest {
         void setUp() {
                 LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
                 validator.afterPropertiesSet();
-                mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(authService, false, "Lax"))
+                mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(authService, false, "Lax", ""))
                                 .setValidator(validator)
                                 .build();
         }
@@ -97,5 +97,32 @@ class AuthControllerTest {
                 verify(authService).refresh(refreshTokenCaptor.capture());
                 assertThat(refreshTokenCaptor.getValue()).isEqualTo("refresh-token");
                 verify(authService).logout("refresh-token");
+        }
+
+        @Test
+        void loginCanSetConfiguredRefreshCookieDomain() throws Exception {
+                LoginRequestDTO request = new LoginRequestDTO();
+                request.setEmail("dev@example.com");
+                request.setPassword("secret123");
+                MockMvc domainMockMvc = MockMvcBuilders
+                                .standaloneSetup(new AuthController(authService, true, "None", ".sneaky.example"))
+                                .setValidator(newValidator())
+                                .build();
+
+                when(authService.authenticate(any(LoginRequestDTO.class)))
+                                .thenReturn(new AuthTokensDTO("access", "refresh"));
+
+                domainMockMvc.perform(post("/api/auth/login")
+                                .contentType("application/json")
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isOk())
+                                .andExpect(cookie().domain(REFRESH_COOKIE_NAME, ".sneaky.example"))
+                                .andExpect(cookie().secure(REFRESH_COOKIE_NAME, true));
+        }
+
+        private static LocalValidatorFactoryBean newValidator() {
+                LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
+                validator.afterPropertiesSet();
+                return validator;
         }
 }

@@ -39,18 +39,21 @@ public class UserController {
     private final CurrentUser currentUser;
     private final boolean refreshCookieSecure;
     private final String refreshCookieSameSite;
+    private final String refreshCookieDomain;
 
     public UserController(
             UserService userService,
             AuthService authService,
             CurrentUser currentUser,
             @Value("${app.auth.refresh-cookie.secure:false}") boolean refreshCookieSecure,
-            @Value("${app.auth.refresh-cookie.same-site:Lax}") String refreshCookieSameSite) {
+            @Value("${app.auth.refresh-cookie.same-site:Lax}") String refreshCookieSameSite,
+            @Value("${app.auth.refresh-cookie.domain:}") String refreshCookieDomain) {
         this.userService = userService;
         this.authService = authService;
         this.currentUser = currentUser;
         this.refreshCookieSecure = refreshCookieSecure;
         this.refreshCookieSameSite = refreshCookieSameSite;
+        this.refreshCookieDomain = refreshCookieDomain == null ? "" : refreshCookieDomain.trim();
     }
 
     @GetMapping
@@ -99,12 +102,17 @@ public class UserController {
     }
 
     private ResponseCookie refreshCookie(String refreshToken) {
-        return ResponseCookie.from(REFRESH_COOKIE_NAME, refreshToken)
+        ResponseCookie.ResponseCookieBuilder cookieBuilder = ResponseCookie.from(REFRESH_COOKIE_NAME, refreshToken)
                 .httpOnly(true)
                 .secure(refreshCookieSecure)
                 .sameSite(refreshCookieSameSite)
                 .path("/api/auth")
-                .maxAge(REFRESH_COOKIE_MAX_AGE)
-                .build();
+                .maxAge(REFRESH_COOKIE_MAX_AGE);
+
+        if (!refreshCookieDomain.isBlank()) {
+            cookieBuilder.domain(refreshCookieDomain);
+        }
+
+        return cookieBuilder.build();
     }
 }
