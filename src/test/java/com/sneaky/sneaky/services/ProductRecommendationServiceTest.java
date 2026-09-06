@@ -94,6 +94,29 @@ class ProductRecommendationServiceTest {
     }
 
     @Test
+    void recommendationsWithExcludedIdsUseFilteredCacheWhenAvailable() {
+        UUID userId = UUID.randomUUID();
+        Products excludedProduct = product("Already Seen", "Nike", "Running", BigDecimal.valueOf(12000), 1);
+        Products cachedProduct = product("Cached Pair", "Adidas", "Lifestyle", BigDecimal.valueOf(9000), 2);
+
+        when(recommendationCache.get(userId, 30))
+                .thenReturn(Optional.of(new ProductRecommendationCache.CachedRecommendationIds(
+                        List.of(excludedProduct.getProductId(), cachedProduct.getProductId()),
+                        true)));
+        when(productsRepository.findByProductIdIn(List.of(cachedProduct.getProductId())))
+                .thenReturn(List.of(cachedProduct));
+
+        ProductRecommendationService.RecommendationResult result =
+                recommendationService.getRecommendedProducts(userId, List.of(excludedProduct.getProductId()));
+
+        assertThat(result.personalized()).isTrue();
+        assertThat(result.products())
+                .extracting(Products::getName)
+                .containsExactly("Cached Pair");
+        verify(productsRepository, never()).findByIsActiveTrueAndStatusOrderByCreatedAtDesc("APPROVED");
+    }
+
+    @Test
     void guestRecommendationsPreferMostViewedProducts() {
         Products newest = product("New Arrival", "Nike", "Runner", BigDecimal.valueOf(12000), 2);
         Products mostViewed = product("Popular Pair", "Adidas", "Lifestyle", BigDecimal.valueOf(9000), 1);

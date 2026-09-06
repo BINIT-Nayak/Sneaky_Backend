@@ -82,8 +82,13 @@ public class ProductRecommendationService {
 
     private RecommendationResult getRecommendedProducts(UUID userId, Set<UUID> excludedProductIds) {
         if (!excludedProductIds.isEmpty()) {
+            RecommendationResult filteredCachedResult = filteredCachedRecommendations(userId, excludedProductIds);
+            if (filteredCachedResult != null) {
+                return filteredCachedResult;
+            }
+
             log.info(
-                    "Recommendation cache bypassed because excluded product ids were provided. audience={}, excludedCount={}",
+                    "Recommendation cache could not satisfy excluded request. audience={}, excludedCount={}",
                     audience(userId),
                     excludedProductIds.size());
             return computeRecommendedProducts(userId, excludedProductIds);
@@ -146,6 +151,47 @@ public class ProductRecommendationService {
             return null;
         }
 
+        return new RecommendationResult(products, cached.get().personalized());
+    }
+
+    private RecommendationResult filteredCachedRecommendations(UUID userId, Set<UUID> excludedProductIds) {
+        Optional<ProductRecommendationCache.CachedRecommendationIds> cached =
+                recommendationCache.get(userId, RECOMMENDATION_RESULT_LIMIT);
+
+        if (cached.isEmpty()) {
+            return null;
+        }
+
+        List<UUID> filteredProductIds = cached.get().productIds()
+                .stream()
+                .filter(productId -> !excludedProductIds.contains(productId))
+                .toList();
+
+        if (filteredProductIds.isEmpty()) {
+            log.info(
+                    "Recommendation Redis cache exhausted by excluded ids. audience={}, cachedCount={}, excludedCount={}",
+                    audience(userId),
+                    cached.get().productIds().size(),
+                    excludedProductIds.size());
+            return null;
+        }
+
+        List<Products> products = productsByIdsPreservingOrder(filteredProductIds);
+
+        if (products.isEmpty()) {
+            log.info(
+                    "Recommendation Redis cache ignored after filtering because product ids no longer resolve. audience={}, filteredCount={}",
+                    audience(userId),
+                    filteredProductIds.size());
+            return null;
+        }
+
+        log.info(
+                "Recommendation Redis cache hit after filtering excluded ids. audience={}, productCount={}, excludedCount={}, personalized={}",
+                audience(userId),
+                products.size(),
+                excludedProductIds.size(),
+                cached.get().personalized());
         return new RecommendationResult(products, cached.get().personalized());
     }
 
