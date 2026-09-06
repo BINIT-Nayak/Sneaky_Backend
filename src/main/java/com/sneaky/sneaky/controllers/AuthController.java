@@ -24,9 +24,11 @@ import com.sneaky.sneaky.dto.user.CreateUserRequestDTO;
 import com.sneaky.sneaky.services.AuthService;
 
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @RequestMapping("/api/auth")
+@Slf4j
 public class AuthController {
 
     private static final String REFRESH_COOKIE_NAME = "sneaky_refresh_token";
@@ -55,6 +57,7 @@ public class AuthController {
     @PostMapping("/refresh")
     public RefreshResponseDTO refresh(
             @CookieValue(name = REFRESH_COOKIE_NAME, required = false) String refreshToken) {
+        log.info("Auth refresh requested. refreshCookiePresent={}", refreshToken != null && !refreshToken.isBlank());
         return authService.refresh(requireRefreshToken(refreshToken));
     }
 

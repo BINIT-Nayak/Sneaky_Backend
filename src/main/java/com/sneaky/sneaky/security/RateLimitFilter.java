@@ -25,7 +25,10 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 @Slf4j
 public class RateLimitFilter extends OncePerRequestFilter {
+    private static final String REFRESH_COOKIE_NAME = "sneaky_refresh_token";
+
     private final StringRedisTemplate redisTemplate;
+    private final JwtUtil jwtUtil;
     private final boolean enabled;
     private final RateLimitPolicy loginPolicy;
     private final RateLimitPolicy registerPolicy;
@@ -36,6 +39,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     public RateLimitFilter(
             StringRedisTemplate redisTemplate,
+            JwtUtil jwtUtil,
             @Value("${app.rate-limit.enabled:true}") boolean enabled,
             @Value("${app.rate-limit.login.limit:3}") int loginLimit,
             @Value("${app.rate-limit.login.window-seconds:300}") long loginWindowSeconds,
@@ -50,6 +54,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
             @Value("${app.rate-limit.analytics.limit:60}") int analyticsLimit,
             @Value("${app.rate-limit.analytics.window-seconds:60}") long analyticsWindowSeconds) {
         this.redisTemplate = redisTemplate;
+        this.jwtUtil = jwtUtil;
         this.enabled = enabled;
         this.loginPolicy = new RateLimitPolicy(
                 "login",
@@ -182,7 +187,41 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private String rateLimitKey(HttpServletRequest request, RateLimitPolicy policy) {
+        if ("refresh".equals(policy.name())) {
+            return "rate-limit:" + policy.name() + ":" + refreshTokenIdOrIp(request);
+        }
+
         return "rate-limit:" + policy.name() + ":" + principalOrIp(request);
+    }
+
+    private String refreshTokenIdOrIp(HttpServletRequest request) {
+        String refreshToken = refreshCookieValue(request);
+        if (refreshToken != null && !refreshToken.isBlank()) {
+            try {
+                String tokenId = jwtUtil.extractTokenId(refreshToken);
+                if (tokenId != null && !tokenId.isBlank()) {
+                    return "refresh-token:" + tokenId;
+                }
+            } catch (RuntimeException ex) {
+                log.debug("Refresh rate limit falling back to IP because refresh cookie could not be parsed");
+            }
+        }
+
+        return "ip:" + clientIp(request);
+    }
+
+    private String refreshCookieValue(HttpServletRequest request) {
+        if (request.getCookies() == null) {
+            return null;
+        }
+
+        for (var cookie : request.getCookies()) {
+            if (REFRESH_COOKIE_NAME.equals(cookie.getName())) {
+                return cookie.getValue();
+            }
+        }
+
+        return null;
     }
 
     private String principalOrIp(HttpServletRequest request) {

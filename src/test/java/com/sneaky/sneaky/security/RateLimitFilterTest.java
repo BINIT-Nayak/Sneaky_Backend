@@ -18,11 +18,15 @@ import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
+import jakarta.servlet.http.Cookie;
+
 class RateLimitFilterTest {
     private final StringRedisTemplate redisTemplate = org.mockito.Mockito.mock(StringRedisTemplate.class);
     private final ValueOperations<String, String> valueOperations = org.mockito.Mockito.mock(ValueOperations.class);
+    private final JwtUtil jwtUtil = org.mockito.Mockito.mock(JwtUtil.class);
     private final RateLimitFilter filter = new RateLimitFilter(
             redisTemplate,
+            jwtUtil,
             true,
             3,
             300,
@@ -145,6 +149,7 @@ class RateLimitFilterTest {
     void skipsRedisWhenRateLimitingIsDisabled() throws Exception {
         RateLimitFilter disabledFilter = new RateLimitFilter(
                 redisTemplate,
+                jwtUtil,
                 false,
                 3,
                 300,
@@ -162,6 +167,22 @@ class RateLimitFilterTest {
         disabledFilter.doFilter(loginRequest(), new MockHttpServletResponse(), new MockFilterChain());
 
         verify(redisTemplate, never()).opsForValue();
+    }
+
+    @Test
+    void rateLimitsRefreshRequestsByRefreshTokenIdWhenCookieExists() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/auth/refresh");
+        request.setRemoteAddr("127.0.0.1");
+        request.setCookies(new Cookie("sneaky_refresh_token", "refresh-token"));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        when(jwtUtil.extractTokenId("refresh-token")).thenReturn("token-id-1");
+        when(valueOperations.increment("rate-limit:refresh:refresh-token:token-id-1")).thenReturn(1L);
+
+        filter.doFilter(request, response, new MockFilterChain());
+
+        assertThat(response.getStatus()).isEqualTo(200);
+        verify(redisTemplate).expire("rate-limit:refresh:refresh-token:token-id-1", Duration.ofSeconds(60));
     }
 
     private static MockHttpServletRequest loginRequest() {
