@@ -16,7 +16,10 @@ The backend handles:
 - Secure JWT-based access management
 - Database operations with JPA & PostgreSQL
 - Redis caching support
-- Product recommendations for the home feed
+- Hybrid product recommendations for the home feed
+- Kafka-based behavioral event tracking
+- Aggregated user preference profiles
+- Redis recommendation cache with event-driven invalidation
 - Product analytics and recently viewed products
 - Cart and wishlist management
 - Validation & security layers
@@ -31,7 +34,9 @@ The backend handles:
 - 🛡️ Spring Security integration
 - 🗄️ PostgreSQL database support
 - 🚀 Redis caching integration
-- 🧠 Rule-based product recommendation model
+- 🧠 Hybrid recommendation engine with rule-based fallback and optional ML reranking
+- 📡 Kafka event tracking with asynchronous preference updates
+- 🎯 User preference profiles for brand, category, price, and behavior signals
 - ❤️ Wishlist APIs, including clear-all and one-call move-to-cart support
 - 🛒 Cart APIs
 - 📈 Product analytics counters and recently viewed products
@@ -55,6 +60,7 @@ The backend handles:
 - Spring Security
 - Spring Validation
 - Spring Data Redis
+- Spring Kafka
 
 ## Database
 - PostgreSQL
@@ -148,6 +154,8 @@ Redis is integrated for:
 - Most-viewed product ranking
 - Recently viewed products and product analytics counters
 - Precomputed recommendation rankings
+- Recommendation cache metadata and invalidation
+- Rate limiting and logout token checks
 
 ## 🧠 Product Recommendations
 
@@ -157,11 +165,26 @@ The home feed can request ranked products through:
 GET /api/products/recommended
 ```
 
+The recommendation system is hybrid:
+
+- Redis cache-aside reads first for fast repeat feed loads
+- rule-based candidate scoring uses popularity, preference profile, cart, wishlist, recent views, passed products, brand/category/merchant affinity, price fit, and diversity
+- optional ML reranking can rerank candidates when enabled
+- fallback stays available when Redis or ML is unavailable
+
 Recommendation details live in [docs/features/recommendations.md](docs/features/recommendations.md).
+
+## 🧭 System Architecture
+
+The current architecture includes event tracking, Kafka, Redis recommendation cache, user preference profile aggregation, and optional ML reranking.
+
+Architecture docs:
+
+- [System architecture](docs/features/system-architecture.md)
 
 ## 📈 Kafka Product Analytics
 
-Kafka analytics is opt-in and feeds Redis counters plus recommendation cache refreshes. See [docs/features/product-analytics.md](docs/features/product-analytics.md).
+Kafka analytics is opt-in and feeds Redis counters, user preference profiles, and recommendation cache invalidation. Event APIs return `202 Accepted` so product interactions are not blocked by downstream recommendation work. See [docs/features/product-analytics.md](docs/features/product-analytics.md).
 
 ## 🛒 Merchant Checkout
 
@@ -192,6 +215,7 @@ Cart reminders create in-app notifications and optional email reminders for cart
 ## 📚 Feature Docs
 
 - [Recommendations](docs/features/recommendations.md)
+- [System architecture](docs/features/system-architecture.md)
 - [Product analytics](docs/features/product-analytics.md)
 - [Commerce APIs](docs/features/commerce.md)
 - [Cart reminders and notifications](docs/features/cart-reminders-and-notifications.md)
